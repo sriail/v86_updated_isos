@@ -8,6 +8,8 @@ let savedState = null;
 let ramSize = 128; // MB
 let vramSize = 8; // MB
 let storageEstimate = 0; // Track estimated storage usage in bytes
+let importedBlobUrls = []; // Track blob URLs for cleanup
+let importedFiles = new Set(); // Track imported file names to avoid double-counting
 
 // DOM Elements
 const elements = {
@@ -93,10 +95,9 @@ function updateMetrics() {
     elements.ramAllocated.textContent = `${ramSize} MB`;
     elements.vramAllocated.textContent = `${vramSize} MB`;
     
-    // Estimate RAM usage percentage (random for demo, would need actual VM metrics)
-    // In a real scenario, you'd get this from the emulator if available
+    // RAM usage - using simulated data (actual VM metrics not available from v86)
     const ramUsagePercent = Math.min(100, Math.floor(Math.random() * 30 + 40)); // 40-70% range
-    elements.ramUsage.textContent = `${ramUsagePercent}%`;
+    elements.ramUsage.textContent = `${ramUsagePercent}% (est)`;
     
     // Update storage estimate
     const storageMB = (storageEstimate / (1024 * 1024)).toFixed(2);
@@ -182,8 +183,11 @@ function initEmulator() {
                 const percent = ((e.loaded / e.total) * 100).toFixed(1);
                 log(`Downloading ${e.file_name}: ${percent}%`);
                 
-                // Track storage estimate
-                storageEstimate = Math.max(storageEstimate, e.total);
+                // Track storage estimate - accumulate total storage used
+                if (e.loaded === e.total && !importedFiles.has(e.file_name)) {
+                    storageEstimate += e.total;
+                    importedFiles.add(e.file_name);
+                }
             }
         });
 
@@ -332,7 +336,12 @@ function handleFileImport(event) {
             savedState = e.target.result;
             elements.restoreStateBtn.disabled = false;
             log(`State file imported successfully`);
-            storageEstimate += file.size;
+            
+            // Track storage if not already imported
+            if (!importedFiles.has(file.name)) {
+                storageEstimate += file.size;
+                importedFiles.add(file.name);
+            }
         };
         reader.readAsArrayBuffer(file);
     } else if (file.name.endsWith('.iso') || file.name.endsWith('.img')) {
@@ -342,6 +351,9 @@ function handleFileImport(event) {
             const blob = new Blob([e.target.result], { type: 'application/octet-stream' });
             const url = URL.createObjectURL(blob);
             
+            // Track blob URL for cleanup
+            importedBlobUrls.push(url);
+            
             // Add to ISO select dropdown
             const option = document.createElement('option');
             option.value = url;
@@ -350,7 +362,12 @@ function handleFileImport(event) {
             elements.isoSelect.value = url;
             
             log(`ISO/Image imported: ${file.name}`);
-            storageEstimate += file.size;
+            
+            // Track storage if not already imported
+            if (!importedFiles.has(file.name)) {
+                storageEstimate += file.size;
+                importedFiles.add(file.name);
+            }
         };
         reader.readAsArrayBuffer(file);
     } else {
@@ -441,4 +458,10 @@ elements.ramSetting.addEventListener('input', function() {
 
 elements.vramSetting.addEventListener('input', function() {
     elements.vramAllocated.textContent = `${this.value} MB`;
+});
+
+// Cleanup blob URLs on page unload to prevent memory leaks
+window.addEventListener('beforeunload', function() {
+    importedBlobUrls.forEach(url => URL.revokeObjectURL(url));
+    importedBlobUrls = [];
 });
