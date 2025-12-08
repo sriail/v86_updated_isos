@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alpine Linux Midori Kiosk - v86 Example</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #f0f0f0;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            margin-top: 0;
+        }
+        
+        .info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-left: 4px solid #2196f3;
+            margin-bottom: 20px;
+        }
+        
+        .warning {
+            background: #fff3e0;
+            padding: 15px;
+            border-left: 4px solid #ff9800;
+            margin-bottom: 20px;
+        }
+        
+        #screen_container {
+            border: 2px solid #ddd;
+            background: #000;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            background: #2196f3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        button:hover {
+            background: #1976d2;
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        pre {
+            background: #263238;
+            color: #aed581;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🖥️ Alpine Linux Midori Kiosk - v86 Demo</h1>
+        
+        <div class="info">
+            <strong>ℹ️ About this demo:</strong><br>
+            This demonstrates the Alpine Linux Midori Kiosk ISO running in the v86 emulator.
+            The system boots directly into the Midori browser in fullscreen kiosk mode.
+        </div>
+        
+        <div class="warning">
+            <strong>⚠️ First boot notice:</strong><br>
+            The first boot takes 60-120 seconds as it downloads and installs packages (~150MB).
+            Subsequent boots are much faster (20-40 seconds).
+        </div>
+        
+        <div class="controls">
+            <button id="start_btn" onclick="startEmulator()">Start Emulator</button>
+            <button id="reset_btn" onclick="resetEmulator()" disabled>Reset</button>
+            <button id="stop_btn" onclick="stopEmulator()" disabled>Stop</button>
+            <button onclick="sendCtrlAltDel()">Send Ctrl+Alt+Del</button>
+        </div>
+        
+        <div id="screen_container"></div>
+        
+        <div class="status">
+            <strong>Status:</strong> <span id="status">Ready to start</span><br>
+            <strong>Boot Stage:</strong> <span id="boot_stage">-</span>
+        </div>
+        
+        <h2>Configuration</h2>
+        <pre><code>var emulator = new V86Starter({
+    wasm_path: "v86.wasm",
+    memory_size: 512 * 1024 * 1024,     // 512MB RAM
+    vga_memory_size: 16 * 1024 * 1024,  // 16MB video RAM
+    screen_container: document.getElementById("screen_container"),
+    bios: { url: "seabios.bin" },
+    vga_bios: { url: "vgabios.bin" },
+    cdrom: {
+        url: "alpine-midori-kiosk.iso",  // Path to the ISO
+    },
+    boot_order: 0x123,  // Boot from CD-ROM first
+    autostart: false,   // Manual start
+});</code></pre>
+        
+        <h2>Boot Process</h2>
+        <ul>
+            <li><strong>BIOS/Bootloader:</strong> 2-5 seconds</li>
+            <li><strong>Kernel Boot:</strong> 3-8 seconds</li>
+            <li><strong>Service Startup:</strong> 2-5 seconds</li>
+            <li><strong>Auto-login:</strong> 1-2 seconds</li>
+            <li><strong>Package Install (first boot):</strong> 40-90 seconds</li>
+            <li><strong>X11 Start:</strong> 5-10 seconds</li>
+            <li><strong>Browser Launch:</strong> 3-8 seconds</li>
+        </ul>
+        
+        <h2>Features</h2>
+        <ul>
+            <li>✅ Minimal size (189MB ISO)</li>
+            <li>✅ Fast boot (~20-40 seconds after first boot)</li>
+            <li>✅ Auto-login (no password required)</li>
+            <li>✅ Fullscreen kiosk mode</li>
+            <li>✅ Optimized for v86 emulator</li>
+            <li>✅ Based on Alpine Linux 3.18</li>
+            <li>✅ Includes Midori browser</li>
+        </ul>
+        
+        <h2>Keyboard Shortcuts</h2>
+        <ul>
+            <li><kbd>Alt</kbd> + <kbd>F2</kbd>: Switch to tty2 (login console)</li>
+            <li><kbd>Alt</kbd> + <kbd>F1</kbd>: Switch back to tty1 (browser)</li>
+            <li><kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>Del</kbd>: Reboot</li>
+        </ul>
+        
+        <h2>Troubleshooting</h2>
+        <p><strong>If the emulator doesn't start:</strong></p>
+        <ul>
+            <li>Make sure v86.wasm, seabios.bin, and vgabios.bin are in the same directory</li>
+            <li>Ensure alpine-midori-kiosk.iso is accessible</li>
+            <li>Check the browser console for errors</li>
+        </ul>
+        
+        <p><strong>If the browser doesn't appear:</strong></p>
+        <ul>
+            <li>Wait for the first boot (60-120 seconds)</li>
+            <li>Press Alt+F2 to see if the system booted</li>
+            <li>Check if network is available (required for package installation)</li>
+        </ul>
+    </div>
+    
+    <script src="libv86.js"></script>
+    <script>
+        let emulator = null;
+        
+        function startEmulator() {
+            if (emulator) return;
+            
+            document.getElementById('status').textContent = 'Initializing...';
+            document.getElementById('boot_stage').textContent = 'Starting emulator';
+            
+            try {
+                emulator = new V86Starter({
+                    wasm_path: "v86.wasm",
+                    memory_size: 512 * 1024 * 1024,
+                    vga_memory_size: 16 * 1024 * 1024,
+                    screen_container: document.getElementById("screen_container"),
+                    bios: {
+                        url: "seabios.bin",
+                    },
+                    vga_bios: {
+                        url: "vgabios.bin",
+                    },
+                    cdrom: {
+                        url: "alpine-midori-kiosk.iso",
+                    },
+                    boot_order: 0x123,
+                    autostart: true,
+                });
+                
+                emulator.add_listener("emulator-ready", function() {
+                    document.getElementById('status').textContent = 'Running';
+                    document.getElementById('boot_stage').textContent = 'Booting...';
+                    document.getElementById('start_btn').disabled = true;
+                    document.getElementById('reset_btn').disabled = false;
+                    document.getElementById('stop_btn').disabled = false;
+                });
+                
+                // Track boot progress (approximate)
+                let bootTime = 0;
+                const bootInterval = setInterval(function() {
+                    if (!emulator) {
+                        clearInterval(bootInterval);
+                        return;
+                    }
+                    
+                    bootTime += 5;
+                    if (bootTime < 10) {
+                        document.getElementById('boot_stage').textContent = 'BIOS initialization...';
+                    } else if (bootTime < 20) {
+                        document.getElementById('boot_stage').textContent = 'Loading kernel...';
+                    } else if (bootTime < 30) {
+                        document.getElementById('boot_stage').textContent = 'Starting services...';
+                    } else if (bootTime < 40) {
+                        document.getElementById('boot_stage').textContent = 'Auto-login...';
+                    } else if (bootTime < 120) {
+                        document.getElementById('boot_stage').textContent = 'Installing packages (first boot only)...';
+                    } else {
+                        document.getElementById('boot_stage').textContent = 'Starting browser...';
+                        clearInterval(bootInterval);
+                    }
+                }, 5000);
+                
+            } catch (error) {
+                document.getElementById('status').textContent = 'Error: ' + error.message;
+                console.error('Error starting emulator:', error);
+            }
+        }
+        
+        function resetEmulator() {
+            if (emulator) {
+                emulator.restart();
+                document.getElementById('boot_stage').textContent = 'Rebooting...';
+            }
+        }
+        
+        function stopEmulator() {
+            if (emulator) {
+                emulator.stop();
+                emulator.destroy();
+                emulator = null;
+                document.getElementById('status').textContent = 'Stopped';
+                document.getElementById('boot_stage').textContent = '-';
+                document.getElementById('start_btn').disabled = false;
+                document.getElementById('reset_btn').disabled = true;
+                document.getElementById('stop_btn').disabled = true;
+            }
+        }
+        
+        function sendCtrlAltDel() {
+            if (emulator) {
+                emulator.keyboard_send_scancodes([
+                    0x1D, // Ctrl down
+                    0x38, // Alt down
+                    0x53, // Delete down
+                    0x53 | 0x80, // Delete up
+                    0x38 | 0x80, // Alt up
+                    0x1D | 0x80, // Ctrl up
+                ]);
+            }
+        }
+    </script>
+</body>
+</html>

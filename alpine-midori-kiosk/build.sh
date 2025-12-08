@@ -57,6 +57,9 @@ cp -a iso-mount/* iso-source/
 $SUDO umount iso-mount
 rmdir iso-mount
 
+# Make ISO files writable
+chmod -R u+w iso-source/
+
 echo "Creating kiosk configuration overlay..."
 
 # Create overlay directory structure
