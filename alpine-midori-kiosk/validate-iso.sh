@@ -5,6 +5,8 @@
 set -e
 
 ISO_FILE="alpine-midori-kiosk.iso"
+MIN_SIZE_MB=150
+MAX_SIZE_MB=250
 REQUIRED_FILES=(
     "boot/vmlinuz-lts"
     "boot/initramfs-lts"
@@ -26,8 +28,8 @@ echo "✓ ISO file exists: $ISO_FILE"
 
 # Check ISO size
 ISO_SIZE=$(du -m "$ISO_FILE" | cut -f1)
-if [ "$ISO_SIZE" -lt 100 ] || [ "$ISO_SIZE" -gt 300 ]; then
-    echo "⚠️  Warning: ISO size is $ISO_SIZE MB (expected 150-200 MB)"
+if [ "$ISO_SIZE" -lt "$MIN_SIZE_MB" ] || [ "$ISO_SIZE" -gt "$MAX_SIZE_MB" ]; then
+    echo "⚠️  Warning: ISO size is $ISO_SIZE MB (expected $MIN_SIZE_MB-$MAX_SIZE_MB MB)"
 else
     echo "✓ ISO size is reasonable: $ISO_SIZE MB"
 fi
@@ -78,7 +80,7 @@ else
 fi
 
 if grep -q "TIMEOUT 10" "$TEMP_DIR/syslinux.cfg"; then
-    echo "✓ Boot timeout set correctly (10 = 1 second)"
+    echo "✓ Boot timeout set correctly (10 deciseconds = 1 second)"
 else
     echo "⚠️  Boot timeout not set to 10"
 fi

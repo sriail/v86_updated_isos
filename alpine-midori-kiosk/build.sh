@@ -195,25 +195,37 @@ fi
 cd iso-source
 
 if command -v xorriso &> /dev/null; then
-    xorriso -as mkisofs \
-        -o "$OUTPUT_DIR/$ISO_NAME" \
-        -V "Alpine Kiosk" \
-        -c boot/syslinux/boot.cat \
-        -b boot/syslinux/isolinux.bin \
-        -no-emul-boot \
-        -boot-load-size 4 \
-        -boot-info-table \
-        -isohybrid-mbr /usr/lib/ISOLINUX/isohdpfx.bin \
-        . 2>/dev/null || \
-    xorriso -as mkisofs \
-        -o "$OUTPUT_DIR/$ISO_NAME" \
-        -V "Alpine Kiosk" \
-        -c boot/syslinux/boot.cat \
-        -b boot/syslinux/isolinux.bin \
-        -no-emul-boot \
-        -boot-load-size 4 \
-        -boot-info-table \
-        .
+    # Try with isohybrid-mbr first, fall back if not available
+    if [ -f /usr/lib/ISOLINUX/isohdpfx.bin ]; then
+        ISOHYBRID_MBR="/usr/lib/ISOLINUX/isohdpfx.bin"
+    elif [ -f /usr/share/syslinux/isohdpfx.bin ]; then
+        ISOHYBRID_MBR="/usr/share/syslinux/isohdpfx.bin"
+    else
+        ISOHYBRID_MBR=""
+    fi
+    
+    if [ -n "$ISOHYBRID_MBR" ]; then
+        xorriso -as mkisofs \
+            -o "$OUTPUT_DIR/$ISO_NAME" \
+            -V "Alpine Kiosk" \
+            -c boot/syslinux/boot.cat \
+            -b boot/syslinux/isolinux.bin \
+            -no-emul-boot \
+            -boot-load-size 4 \
+            -boot-info-table \
+            -isohybrid-mbr "$ISOHYBRID_MBR" \
+            .
+    else
+        xorriso -as mkisofs \
+            -o "$OUTPUT_DIR/$ISO_NAME" \
+            -V "Alpine Kiosk" \
+            -c boot/syslinux/boot.cat \
+            -b boot/syslinux/isolinux.bin \
+            -no-emul-boot \
+            -boot-load-size 4 \
+            -boot-info-table \
+            .
+    fi
 else
     genisoimage -o "$OUTPUT_DIR/$ISO_NAME" \
         -V "Alpine Kiosk" \

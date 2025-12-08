@@ -183,6 +183,7 @@
     <script src="libv86.js"></script>
     <script>
         let emulator = null;
+        let bootInterval = null;
         
         function startEmulator() {
             if (emulator) return;
@@ -219,9 +220,10 @@
                 
                 // Track boot progress (approximate)
                 let bootTime = 0;
-                const bootInterval = setInterval(function() {
+                bootInterval = setInterval(function() {
                     if (!emulator) {
                         clearInterval(bootInterval);
+                        bootInterval = null;
                         return;
                     }
                     
@@ -239,6 +241,7 @@
                     } else {
                         document.getElementById('boot_stage').textContent = 'Starting browser...';
                         clearInterval(bootInterval);
+                        bootInterval = null;
                     }
                 }, 5000);
                 
@@ -260,6 +263,10 @@
                 emulator.stop();
                 emulator.destroy();
                 emulator = null;
+                if (bootInterval) {
+                    clearInterval(bootInterval);
+                    bootInterval = null;
+                }
                 document.getElementById('status').textContent = 'Stopped';
                 document.getElementById('boot_stage').textContent = '-';
                 document.getElementById('start_btn').disabled = false;
