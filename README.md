@@ -25,10 +25,10 @@ A clean, simple website that uses the v86 emulator to run SliTaz 5.0 rolling 32-
    ```bash
    npm install
    ```
+   This installs the v86 package. The emulator files are then copied from `node_modules/v86/build/` to `public/lib/` to serve them without CDN dependencies.
 
-2. **Download BIOS files**
-   - Download `seabios.bin` and `vgabios.bin` from [v86 BIOS repository](https://github.com/copy/v86/tree/master/bios)
-   - Place them in `public/lib/` directory
+2. **Download BIOS files** (Already included!)
+   The BIOS files (`seabios.bin` and `vgabios.bin`) are already included in the repository for convenience.
 
 3. **Download SliTaz ISO**
    - Download SliTaz 5.0 Rolling 32-bit ISO from [SliTaz Mirror](http://mirror.slitaz.org/iso/rolling/)

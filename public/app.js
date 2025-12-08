@@ -144,13 +144,18 @@ function initEmulator() {
         });
 
         emulator.add_listener("download-error", function(e) {
-            log(`Error downloading ${e.file_name || 'file'}`, 'error');
+            const fileName = e.file_name || 'file';
+            log(`Error downloading ${fileName}. Please check the file exists.`, 'error');
             elements.statusMetric.textContent = 'Download Error';
+            
+            // Re-enable start button on error
+            elements.startBtn.disabled = false;
         });
 
     } catch (error) {
         log(`Error initializing emulator: ${error.message}`, 'error');
         elements.statusMetric.textContent = 'Error';
+        elements.startBtn.disabled = false;
         console.error(error);
     }
 }
