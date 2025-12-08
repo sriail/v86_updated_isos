@@ -1,4 +1,6 @@
 // V86 Emulator Controller
+import V86Starter from './lib/libv86.mjs';
+
 let emulator = null;
 let startTime = null;
 let metricsInterval = null;
