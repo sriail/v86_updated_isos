@@ -1,0 +1,15 @@
+{
+  "name": "v86_updated_isos",
+  "version": "1.0.0",
+  "description": "more modern iso's optimized for v86",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "v86": "^0.5.292"
+  }
+}

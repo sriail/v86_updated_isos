@@ -1,0 +1,21 @@
+# Node modules
+node_modules/
+
+# ISO files (can be large)
+public/iso/*.iso
+
+# BIOS files
+public/lib/seabios.bin
+public/lib/vgabios.bin
+
+# Log files
+*.log
+npm-debug.log*
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Editor directories
+.vscode/
+.idea/
