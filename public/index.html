@@ -13,6 +13,31 @@
             <p class="subtitle">SliTaz 5.0 Rolling 32-bit</p>
         </header>
 
+        <div class="settings-panel">
+            <h3>
+                <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/>
+                </svg>
+                VM Settings
+            </h3>
+            <div class="settings-grid">
+                <div class="setting-item">
+                    <label for="ram-setting">RAM (MB):</label>
+                    <input type="number" id="ram-setting" min="64" max="512" value="128" step="64">
+                </div>
+                <div class="setting-item">
+                    <label for="vram-setting">VRAM (MB):</label>
+                    <input type="number" id="vram-setting" min="2" max="16" value="8" step="2">
+                </div>
+                <div class="setting-item">
+                    <label for="iso-select">ISO:</label>
+                    <select id="iso-select">
+                        <option value="iso/slitaz-rolling.iso">SliTaz 5.0 Rolling</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
         <div class="controls">
             <button id="start-btn" class="btn" title="Start Emulator">
                 <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
@@ -57,7 +82,20 @@
                 </svg>
                 Restore
             </button>
+            <button id="import-iso-btn" class="btn" title="Import ISO/Image">
+                <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
+                </svg>
+                Import
+            </button>
+            <button id="export-state-btn" class="btn" title="Export State" disabled>
+                <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2z"/>
+                </svg>
+                Export
+            </button>
         </div>
+        <input type="file" id="file-input" accept=".iso,.img,.state" style="display: none;">
 
         <div class="emulator-container">
             <div id="screen_container">
@@ -104,6 +142,41 @@
                         </svg>
                         <span class="metric-label">Uptime:</span>
                         <span id="uptime-metric" class="metric-value">0s</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="metric-group">
+                <h3>Resource Consumption</h3>
+                <div class="metric-grid">
+                    <div class="metric-item">
+                        <svg class="metric-icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M15,9H9v6h6V9z M13,13h-2v-2h2V13z"/>
+                            <path d="M21,3H3C1.9,3,1,3.9,1,5v14c0,1.1,0.9,2,2,2h18c1.1,0,2-0.9,2-2V5C23,3.9,22.1,3,21,3z M21,19H3V5h18V19z"/>
+                        </svg>
+                        <span class="metric-label">RAM Allocated:</span>
+                        <span id="ram-allocated" class="metric-value">0 MB</span>
+                    </div>
+                    <div class="metric-item">
+                        <svg class="metric-icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4c-1.48 0-2.85.43-4.01 1.17l1.46 1.46C10.21 6.23 11.08 6 12 6c3.04 0 5.5 2.46 5.5 5.5v.5H19c1.66 0 3 1.34 3 3 0 1.13-.64 2.11-1.56 2.62l1.45 1.45C23.16 18.16 24 16.68 24 15c0-2.64-2.05-4.78-4.65-4.96zM3 5.27l2.75 2.74C2.56 8.15 0 10.77 0 14c0 3.31 2.69 6 6 6h11.73l2 2L21 20.73 4.27 4 3 5.27zM7.73 10l8 8H6c-2.21 0-4-1.79-4-4s1.79-4 4-4h1.73z"/>
+                        </svg>
+                        <span class="metric-label">RAM Usage:</span>
+                        <span id="ram-usage" class="metric-value">0%</span>
+                    </div>
+                    <div class="metric-item">
+                        <svg class="metric-icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M20 18c1.1 0 1.99-.9 1.99-2L22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z"/>
+                        </svg>
+                        <span class="metric-label">VRAM Allocated:</span>
+                        <span id="vram-allocated" class="metric-value">0 MB</span>
+                    </div>
+                    <div class="metric-item">
+                        <svg class="metric-icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4c-1.48 0-2.85.43-4.01 1.17l1.46 1.46C10.21 6.23 11.08 6 12 6c3.04 0 5.5 2.46 5.5 5.5v.5H19c1.66 0 3 1.34 3 3 0 1.13-.64 2.11-1.56 2.62l1.45 1.45C23.16 18.16 24 16.68 24 15c0-2.64-2.05-4.78-4.65-4.96zM3 5.27l2.75 2.74C2.56 8.15 0 10.77 0 14c0 3.31 2.69 6 6 6h11.73l2 2L21 20.73 4.27 4 3 5.27zM7.73 10l8 8H6c-2.21 0-4-1.79-4-4s1.79-4 4-4h1.73z"/>
+                        </svg>
+                        <span class="metric-label">Storage Used:</span>
+                        <span id="storage-used" class="metric-value">0 MB</span>
                     </div>
                 </div>
             </div>
