@@ -14,10 +14,12 @@ A clean, feature-rich website that uses the v86 emulator to run SliTaz 5.0 rolli
 
 - ✨ Clean, minimalist design
 - 🎨 Automatic dark/light theme based on browser preferences
+- 🌐 **Built-in Network Relay Server** - Network enabled by default using WISP protocol
 - ⚙️ **Configurable VM Settings:**
   - Adjustable RAM (64-512 MB)
   - Adjustable VRAM (2-16 MB)
   - ISO selection dropdown
+  - Network configuration (None, WISP, or Host Relay)
 - 📊 **Dual Metrics Dashboard:**
   - Real-time performance metrics (MIPS, memory, instructions/sec, uptime)
   - Resource consumption monitoring (RAM allocated, RAM usage %, VRAM, storage)
@@ -37,7 +39,7 @@ A clean, feature-rich website that uses the v86 emulator to run SliTaz 5.0 rolli
    ```bash
    npm install
    ```
-   This installs the v86 package. The emulator files are then copied from `node_modules/v86/build/` to `public/lib/` to serve them without CDN dependencies.
+   This installs the v86 package and WISP.js for network relay functionality.
 
 2. **Download BIOS files** (Already included!)
    The BIOS files (`seabios.bin` and `vgabios.bin`) are already included in the repository for convenience.
@@ -54,7 +56,18 @@ A clean, feature-rich website that uses the v86 emulator to run SliTaz 5.0 rolli
    - Start the web server (see step 4)
    - Use the **Import** button in the web interface to load any ISO file
 
-4. **Run the website**
+4. **Run the server** (Recommended - includes network relay)
+   ```bash
+   npm start
+   ```
+   Navigate to `http://localhost:8000`
+   
+   The built-in server provides:
+   - Static file serving for the web interface
+   - Network relay using WISP protocol (enabled by default)
+   - WebSocket connection on the same port
+   
+   **Alternative methods** (no network relay):
    ```bash
    # Using Python
    cd public && python3 -m http.server 8000
@@ -62,12 +75,12 @@ A clean, feature-rich website that uses the v86 emulator to run SliTaz 5.0 rolli
    # Using Node.js http-server
    npx http-server public -p 8000
    ```
-   Navigate to `http://localhost:8000`
 
 5. **Configure and Start**
+   - Network relay is already configured by default
    - Adjust RAM and VRAM settings as needed
    - Select or import an ISO file
-   - Click **Start** to begin emulation
+   - Click **Start** to begin emulation with network enabled
 
 ### File Structure
 
@@ -124,6 +137,49 @@ Change your system/browser theme settings to see the interface adapt automatical
 - **Restore**: Restore previously saved state
 - **Import**: Load ISO, IMG, or STATE files from your computer
 - **Export**: Download current emulator state as a file
+
+### Network Configuration
+
+The emulator now includes built-in network support using the WISP protocol!
+
+#### Default Setup
+- **Network Relay is enabled by default** when using `npm start`
+- The relay server runs on the same port as the web server (8000)
+- No additional configuration needed - just start the emulator
+
+#### Network Modes
+1. **Host Connection (Default)** - Uses the built-in WISP relay server
+   - Provides network access through your host machine
+   - URL: `ws://localhost:8000`
+   - Works out of the box with `npm start`
+
+2. **WISP Server** - Connect to a custom WISP server
+   - Enter a custom WISP server URL (e.g., `wss://wisp.example.com`)
+   - Useful for connecting to external proxies
+
+3. **None** - Disable networking
+   - VM has no network connectivity
+
+#### Running Servers Separately
+
+You can also run the servers individually:
+
+```bash
+# Run the main server (HTTP + Relay) - Recommended
+npm start
+
+# Or run the main server on a custom port
+node server.js 8080
+
+# Or run standalone WISP server on a different port
+npm run wisp
+```
+
+#### Technical Details
+- Uses [@mercuryworkshop/wisp-js](https://www.npmjs.com/package/@mercuryworkshop/wisp-js)
+- WISP = WebSocket over Internet Streaming Protocol
+- Provides transparent network access for the VM
+- WebSocket and HTTP traffic share the same port
 
 ### Metrics Dashboard
 
