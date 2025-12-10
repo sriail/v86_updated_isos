@@ -6,8 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js",
-    "wisp": "node wisp-server.js",
-    "relay": "node relay-server.js"
+    "wisp": "node wisp-server.js"
   },
   "keywords": [],
   "author": "",

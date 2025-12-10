@@ -88,6 +88,7 @@ You should see a response indicating WebSocket handling (not a 404).
 ## Testing Server Scripts Individually
 
 ### Test Main Server (HTTP + Relay)
+This is the recommended server that provides both file serving and network relay:
 ```bash
 npm start
 # or
@@ -96,16 +97,8 @@ node server.js
 node server.js 8080
 ```
 
-### Test Relay Server Only
-```bash
-npm run relay
-# or
-node relay-server.js
-# or with custom port
-node relay-server.js 8080
-```
-
-### Test WISP Server Only
+### Test Standalone WISP Server Only
+Useful if you want to run WISP on a separate port or server:
 ```bash
 npm run wisp
 # or

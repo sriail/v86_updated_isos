@@ -165,13 +165,13 @@ The emulator now includes built-in network support using the WISP protocol!
 You can also run the servers individually:
 
 ```bash
-# Run the main server (HTTP + Relay)
+# Run the main server (HTTP + Relay) - Recommended
 npm start
 
-# Or run relay server on custom port
-node relay-server.js 8080
+# Or run the main server on a custom port
+node server.js 8080
 
-# Or run standalone WISP server
+# Or run standalone WISP server on a different port
 npm run wisp
 ```
 
