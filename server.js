@@ -14,7 +14,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const { Server: WispServer } = require('@mercuryworkshop/wisp-js');
+const { server: wisp } = require('@mercuryworkshop/wisp-js/server');
 
 const PORT = process.env.PORT || parseInt(process.argv[2]) || 8000;
 const HOST = process.env.HOST || '0.0.0.0';
@@ -81,9 +81,9 @@ const server = http.createServer((req, res) => {
     });
 });
 
-// Create WISP server instance for network relay
-const wispServer = new WispServer({
-    server: server,
+// Handle WebSocket upgrades for WISP network relay
+server.on('upgrade', (req, socket, head) => {
+    wisp.routeRequest(req, socket, head);
 });
 
 // Start the server

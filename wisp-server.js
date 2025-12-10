@@ -10,7 +10,7 @@
  */
 
 const http = require('http');
-const { Server: WispServer } = require('@mercuryworkshop/wisp-js');
+const { server: wisp } = require('@mercuryworkshop/wisp-js/server');
 
 const PORT = process.env.WISP_PORT || parseInt(process.argv[2]) || 8001;
 const HOST = process.env.WISP_HOST || '0.0.0.0';
@@ -21,9 +21,9 @@ const server = http.createServer((req, res) => {
     res.end('WISP Server running. Connect via WebSocket.\n');
 });
 
-// Create WISP server instance
-const wispServer = new WispServer({
-    server: server,
+// Handle WebSocket upgrades for WISP
+server.on('upgrade', (req, socket, head) => {
+    wisp.routeRequest(req, socket, head);
 });
 
 // Start the server
