@@ -159,8 +159,13 @@ function initEmulator() {
             return;
         }
         // Validate WISP URL format
-        if (!wispUrl.startsWith('wss://') && !wispUrl.startsWith('ws://')) {
-            log('Error: WISP server URL must start with wss:// or ws://', 'error');
+        try {
+            const url = new URL(wispUrl);
+            if (url.protocol !== 'wss:' && url.protocol !== 'ws:') {
+                throw new Error('Invalid protocol');
+            }
+        } catch (error) {
+            log('Error: WISP server URL must be a valid WebSocket URL (wss:// or ws://)', 'error');
             elements.statusMetric.textContent = 'Configuration Error';
             elements.startBtn.disabled = false;
             return;
@@ -175,8 +180,13 @@ function initEmulator() {
             return;
         }
         // Validate relay URL format
-        if (!relayUrl.startsWith('wss://') && !relayUrl.startsWith('ws://')) {
-            log('Error: Relay server URL must start with wss:// or ws://', 'error');
+        try {
+            const url = new URL(relayUrl);
+            if (url.protocol !== 'wss:' && url.protocol !== 'ws:') {
+                throw new Error('Invalid protocol');
+            }
+        } catch (error) {
+            log('Error: Relay server URL must be a valid WebSocket URL (wss:// or ws://)', 'error');
             elements.statusMetric.textContent = 'Configuration Error';
             elements.startBtn.disabled = false;
             return;
@@ -514,8 +524,7 @@ function handlePointerLockChange() {
         elements.screenContainer.classList.add('cursor-locked');
         elements.cursorLockBtn.innerHTML = `
             <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M13.64,21.97C13.14,22.21 12.54,22 12.31,21.5L10.13,16.76L7.62,18.78C7.45,18.92 7.24,19 7,19A1,1 0 0,1 6,18V3A1,1 0 0,1 7,2C7.24,2 7.47,2.09 7.64,2.23L7.65,2.22L19.14,11.86C19.57,12.22 19.62,12.85 19.27,13.27C19.12,13.45 18.91,13.57 18.7,13.61L15.54,14.23L17.74,18.96C18,19.46 17.76,20.05 17.26,20.28L13.64,21.97Z"/>
-                <path d="M15,16L13,13L17,12L12,7L13,11L10,11L15,16M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2Z" opacity="0.3"/>
+                <path d="M18,8A2,2 0 0,1 20,10V20A2,2 0 0,1 18,22H6A2,2 0 0,1 4,20V10A2,2 0 0,1 6,8H15V6A3,3 0 0,0 12,3A3,3 0 0,0 9,6H7A5,5 0 0,1 12,1A5,5 0 0,1 17,6V8H18M12,17A2,2 0 0,0 14,15A2,2 0 0,0 12,13A2,2 0 0,0 10,15A2,2 0 0,0 12,17Z"/>
             </svg>
             Unlock Cursor
         `;
