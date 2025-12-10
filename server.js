@@ -76,7 +76,8 @@ const server = http.createServer((req, res) => {
                 'Cross-Origin-Embedder-Policy': 'require-corp',
                 'Cross-Origin-Opener-Policy': 'same-origin'
             });
-            res.end(content, 'utf-8');
+            // Binary files should not have encoding specified
+            res.end(content);
         }
     });
 });
