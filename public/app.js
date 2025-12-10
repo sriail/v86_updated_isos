@@ -14,16 +14,7 @@ let isPointerLocked = false;
 let pointerLockRequested = false;
 let lastMetricsTime = Date.now();
 
-// Performance metrics constants
-const BASELINE_IPS = 50000000; // Baseline for CPU usage estimation: 50 million instructions/sec (50 MIPS)
-const RAM_USAGE_BASE = 20; // Base RAM usage percentage
-const RAM_USAGE_MAX = 95; // Maximum RAM usage percentage
-const RAM_USAGE_INTERVAL = 60; // Seconds to increase RAM usage by INCREMENT
-const RAM_USAGE_INCREMENT = 5; // Percentage increment per interval
-const VRAM_USAGE_BASE = 10; // Base VRAM usage percentage
-const VRAM_USAGE_MAX = 80; // Maximum VRAM usage percentage
-const VRAM_USAGE_INTERVAL = 120; // Seconds to increase VRAM usage by INCREMENT
-const VRAM_USAGE_INCREMENT = 3; // Percentage increment per interval
+// Performance metrics constants - removed estimation constants
 
 // DOM Elements
 const elements = {
@@ -46,18 +37,36 @@ const elements = {
     ipsMetric: document.getElementById('ips-metric'),
     statusMetric: document.getElementById('status-metric'),
     uptimeMetric: document.getElementById('uptime-metric'),
-    cpuUsageMetric: document.getElementById('cpu-usage-metric'),
     ramAllocated: document.getElementById('ram-allocated'),
-    ramUsage: document.getElementById('ram-usage'),
     vramAllocated: document.getElementById('vram-allocated'),
-    vramUsage: document.getElementById('vram-usage'),
     storageUsed: document.getElementById('storage-used'),
     log: document.getElementById('log'),
     screenContainer: document.getElementById('screen_container'),
     mouseLockDialog: document.getElementById('mouse-lock-dialog'),
     mouseLockProceed: document.getElementById('mouse-lock-proceed'),
-    mouseLockCancel: document.getElementById('mouse-lock-cancel')
+    mouseLockCancel: document.getElementById('mouse-lock-cancel'),
+    networkMode: document.getElementById('network-mode'),
+    wispUrl: document.getElementById('wisp-url'),
+    wispUrlContainer: document.getElementById('wisp-url-container'),
+    relayUrl: document.getElementById('relay-url'),
+    relayUrlContainer: document.getElementById('relay-url-container')
 };
+
+// Validate WebSocket URL
+function validateWebSocketUrl(url) {
+    if (!url) {
+        return { valid: false, error: 'URL is required' };
+    }
+    try {
+        const urlObj = new URL(url);
+        if (urlObj.protocol !== 'wss:' && urlObj.protocol !== 'ws:') {
+            return { valid: false, error: 'URL must use wss:// or ws:// protocol' };
+        }
+        return { valid: true };
+    } catch (error) {
+        return { valid: false, error: 'URL is not valid' };
+    }
+}
 
 // Logging function
 function log(message, type = 'info') {
@@ -103,18 +112,6 @@ function updateMetrics() {
             const ips = stats.instructions_per_second ? 
                 stats.instructions_per_second.toLocaleString() : '0';
             elements.ipsMetric.textContent = ips;
-            
-            // Calculate CPU usage based on instruction rate changes
-            const currentTime = Date.now();
-            const timeDelta = (currentTime - lastMetricsTime) / 1000;
-            
-            if (stats.instructions_per_second && timeDelta > 0 && BASELINE_IPS > 0) {
-                // Estimate CPU usage based on IPS relative to a baseline
-                const cpuUsage = Math.min(100, Math.round((stats.instructions_per_second / BASELINE_IPS) * 100));
-                elements.cpuUsageMetric.textContent = `${cpuUsage}%`;
-            }
-            
-            lastMetricsTime = currentTime;
         }
     } catch (e) {
         // Stats might not be available yet
@@ -127,20 +124,7 @@ function updateMetrics() {
     elements.ramAllocated.textContent = `${ramSize} MB`;
     elements.vramAllocated.textContent = `${vramSize} MB`;
     
-    // Try to get actual memory usage from emulator if available
-    // V86 doesn't expose direct RAM usage, so we estimate based on runtime
-    const estimatedRamUsage = RAM_USAGE_INTERVAL > 0 
-        ? Math.min(RAM_USAGE_MAX, Math.floor(RAM_USAGE_BASE + (uptime / RAM_USAGE_INTERVAL) * RAM_USAGE_INCREMENT))
-        : RAM_USAGE_BASE;
-    elements.ramUsage.textContent = `${estimatedRamUsage}%`;
-    
-    // VRAM usage estimate (typically lower than RAM)
-    const estimatedVramUsage = VRAM_USAGE_INTERVAL > 0
-        ? Math.min(VRAM_USAGE_MAX, Math.floor(VRAM_USAGE_BASE + (uptime / VRAM_USAGE_INTERVAL) * VRAM_USAGE_INCREMENT))
-        : VRAM_USAGE_BASE;
-    elements.vramUsage.textContent = `${estimatedVramUsage}%`;
-    
-    // Update storage estimate
+    // Update storage
     const storageMB = (storageEstimate / (1024 * 1024)).toFixed(2);
     elements.storageUsed.textContent = `${storageMB} MB`;
 }
@@ -156,6 +140,11 @@ function initEmulator() {
     const isoPath = elements.isoSelect.value;
 
     log(`Configuration: RAM=${ramSize}MB, VRAM=${vramSize}MB, ISO=${isoPath}`);
+
+    // Get network configuration
+    const networkMode = elements.networkMode.value;
+    const wispUrl = elements.wispUrl.value.trim();
+    const relayUrl = elements.relayUrl.value.trim();
 
     const config = {
         wasm_path: "lib/v86.wasm",
@@ -173,7 +162,34 @@ function initEmulator() {
         },
         boot_order: 0x123, // Boot from CD-ROM first
         autostart: true,
+        acpi: true, // Enable ACPI for advanced power management features
+        fastboot: true, // Skip BIOS setup delays for faster boot time
     };
+
+    // Add network configuration if enabled
+    if (networkMode === 'wisp') {
+        const validation = validateWebSocketUrl(wispUrl);
+        if (!validation.valid) {
+            log(`Error: WISP server URL validation failed - ${validation.error}`, 'error');
+            elements.statusMetric.textContent = 'Configuration Error';
+            elements.startBtn.disabled = false;
+            return;
+        }
+        log(`Enabling network with WISP server: ${wispUrl}`);
+        config.network_relay_url = wispUrl;
+    } else if (networkMode === 'host') {
+        const validation = validateWebSocketUrl(relayUrl);
+        if (!validation.valid) {
+            log(`Error: Relay server URL validation failed - ${validation.error}`, 'error');
+            elements.statusMetric.textContent = 'Configuration Error';
+            elements.startBtn.disabled = false;
+            return;
+        }
+        log(`Enabling network with host connection (relay): ${relayUrl}`);
+        config.network_relay_url = relayUrl;
+    } else {
+        log('Network disabled');
+    }
 
     try {
         emulator = new V86Starter(config);
@@ -200,6 +216,9 @@ function initEmulator() {
             elements.ramSetting.disabled = true;
             elements.vramSetting.disabled = true;
             elements.isoSelect.disabled = true;
+            elements.networkMode.disabled = true;
+            elements.wispUrl.disabled = true;
+            elements.relayUrl.disabled = true;
 
             // Start metrics updates
             metricsInterval = setInterval(updateMetrics, 1000);
@@ -213,6 +232,9 @@ function initEmulator() {
             elements.ramSetting.disabled = false;
             elements.vramSetting.disabled = false;
             elements.isoSelect.disabled = false;
+            elements.networkMode.disabled = false;
+            elements.wispUrl.disabled = false;
+            elements.relayUrl.disabled = false;
             
             if (metricsInterval) {
                 clearInterval(metricsInterval);
@@ -243,6 +265,9 @@ function initEmulator() {
             elements.ramSetting.disabled = false;
             elements.vramSetting.disabled = false;
             elements.isoSelect.disabled = false;
+            elements.networkMode.disabled = false;
+            elements.wispUrl.disabled = false;
+            elements.relayUrl.disabled = false;
         });
 
     } catch (error) {
@@ -252,6 +277,9 @@ function initEmulator() {
         elements.ramSetting.disabled = false;
         elements.vramSetting.disabled = false;
         elements.isoSelect.disabled = false;
+        elements.networkMode.disabled = false;
+        elements.wispUrl.disabled = false;
+        elements.relayUrl.disabled = false;
         console.error(error);
     }
 }
@@ -282,6 +310,9 @@ function stopEmulator() {
         elements.ramSetting.disabled = false;
         elements.vramSetting.disabled = false;
         elements.isoSelect.disabled = false;
+        elements.networkMode.disabled = false;
+        elements.wispUrl.disabled = false;
+        elements.relayUrl.disabled = false;
         
         elements.statusMetric.textContent = 'Stopped';
         
@@ -497,7 +528,7 @@ function handlePointerLockChange() {
         elements.screenContainer.classList.remove('cursor-locked');
         elements.cursorLockBtn.innerHTML = `
             <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12,17A2,2 0 0,0 14,15C14,13.89 13.1,13 12,13A2,2 0 0,0 10,15A2,2 0 0,0 12,17M18,8A2,2 0 0,1 20,10V20A2,2 0 0,1 18,22H6A2,2 0 0,1 4,20V10C4,8.89 4.9,8 6,8H7V6A5,5 0 0,1 12,1A5,5 0 0,1 17,6V8H18M12,3A3,3 0 0,0 9,6V8H15V6A3,3 0 0,0 12,3Z"/>
+                <path d="M13.64,21.97C13.14,22.21 12.54,22 12.31,21.5L10.13,16.76L7.62,18.78C7.45,18.92 7.24,19 7,19A1,1 0 0,1 6,18V3A1,1 0 0,1 7,2C7.24,2 7.47,2.09 7.64,2.23L7.65,2.22L19.14,11.86C19.57,12.22 19.62,12.85 19.27,13.27C19.12,13.45 18.91,13.57 18.7,13.61L15.54,14.23L17.74,18.96C18,19.46 17.76,20.05 17.26,20.28L13.64,21.97Z"/>
             </svg>
             Lock Cursor
         `;
@@ -587,10 +618,7 @@ log('- Or import your own ISO file');
 elements.statusMetric.textContent = 'Ready';
 elements.ramAllocated.textContent = `${elements.ramSetting.value} MB`;
 elements.vramAllocated.textContent = `${elements.vramSetting.value} MB`;
-elements.ramUsage.textContent = '0%';
-elements.vramUsage.textContent = '0%';
 elements.storageUsed.textContent = '0 MB';
-elements.cpuUsageMetric.textContent = '0%';
 
 // Update resource metrics when settings change
 elements.ramSetting.addEventListener('input', function() {
@@ -599,6 +627,20 @@ elements.ramSetting.addEventListener('input', function() {
 
 elements.vramSetting.addEventListener('input', function() {
     elements.vramAllocated.textContent = `${this.value} MB`;
+});
+
+// Network mode selection handler
+elements.networkMode.addEventListener('change', function() {
+    if (this.value === 'wisp') {
+        elements.wispUrlContainer.style.display = 'block';
+        elements.relayUrlContainer.style.display = 'none';
+    } else if (this.value === 'host') {
+        elements.wispUrlContainer.style.display = 'none';
+        elements.relayUrlContainer.style.display = 'block';
+    } else {
+        elements.wispUrlContainer.style.display = 'none';
+        elements.relayUrlContainer.style.display = 'none';
+    }
 });
 
 // Cleanup blob URLs on page unload to prevent memory leaks

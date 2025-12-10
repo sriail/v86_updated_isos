@@ -70,7 +70,7 @@
             </button>
             <button id="cursor-lock-btn" class="btn" title="Lock/Unlock Cursor" disabled>
                 <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M13,9H11V7H13M13,17H11V11H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/>
+                    <path d="M13.64,21.97C13.14,22.21 12.54,22 12.31,21.5L10.13,16.76L7.62,18.78C7.45,18.92 7.24,19 7,19A1,1 0 0,1 6,18V3A1,1 0 0,1 7,2C7.24,2 7.47,2.09 7.64,2.23L7.65,2.22L19.14,11.86C19.57,12.22 19.62,12.85 19.27,13.27C19.12,13.45 18.91,13.57 18.7,13.61L15.54,14.23L17.74,18.96C18,19.46 17.76,20.05 17.26,20.28L13.64,21.97Z"/>
                 </svg>
                 Lock Cursor
             </button>
@@ -128,6 +128,47 @@
             </div>
         </div>
 
+        <!-- Network Settings -->
+        <div class="network-panel">
+            <h3>
+                <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M17,3A2,2 0 0,1 19,5V15A2,2 0 0,1 17,17H13V19H14A1,1 0 0,1 15,20H22V22H15A1,1 0 0,1 14,23H10A1,1 0 0,1 9,22H2V20H9A1,1 0 0,1 10,19H11V17H7C5.89,17 5,16.1 5,15V5A2,2 0 0,1 7,3H17M17,5H7V15H17V5Z"/>
+                </svg>
+                Network Configuration
+            </h3>
+            <div class="network-settings">
+                <div class="setting-item">
+                    <label for="network-mode">Network Mode:</label>
+                    <select id="network-mode">
+                        <option value="none">None (No Network)</option>
+                        <option value="wisp">WISP Server (WebSocket Proxy)</option>
+                        <option value="host">Host Connection (Use Host Internet)</option>
+                    </select>
+                </div>
+                <div class="setting-item" id="wisp-url-container" style="display: none;">
+                    <label for="wisp-url">WISP Server URL:</label>
+                    <input type="text" id="wisp-url" placeholder="wss://wisp.example.com" value="">
+                </div>
+                <div class="setting-item" id="relay-url-container" style="display: none;">
+                    <label for="relay-url">Relay Server URL:</label>
+                    <input type="text" id="relay-url" placeholder="wss://relay.widgetry.org/" value="wss://relay.widgetry.org/">
+                </div>
+                <div class="network-info">
+                    <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M13,9H11V7H13M13,17H11V11H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/>
+                    </svg>
+                    <div>
+                        <strong>Network Info:</strong>
+                        <ul>
+                            <li><strong>None:</strong> VM has no network connectivity</li>
+                            <li><strong>WISP Server:</strong> Connect through WebSocket proxy server (requires WISP.js compatible server)</li>
+                            <li><strong>Host Connection:</strong> Use browser's network connection (requires relay configuration)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="metrics">
             <div class="metric-group">
                 <h3>Performance Metrics</h3>
@@ -167,13 +208,7 @@
                         <span class="metric-label">Uptime:</span>
                         <span id="uptime-metric" class="metric-value">0s</span>
                     </div>
-                    <div class="metric-item">
-                        <svg class="metric-icon" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4M12.5,7V12.25L17,14.92L16.25,16.15L11,13V7H12.5Z"/>
-                        </svg>
-                        <span class="metric-label">CPU Usage:</span>
-                        <span id="cpu-usage-metric" class="metric-value">0%</span>
-                    </div>
+
                 </div>
             </div>
 
@@ -188,13 +223,7 @@
                         <span class="metric-label">RAM Allocated:</span>
                         <span id="ram-allocated" class="metric-value">0 MB</span>
                     </div>
-                    <div class="metric-item">
-                        <svg class="metric-icon" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4c-1.48 0-2.85.43-4.01 1.17l1.46 1.46C10.21 6.23 11.08 6 12 6c3.04 0 5.5 2.46 5.5 5.5v.5H19c1.66 0 3 1.34 3 3 0 1.13-.64 2.11-1.56 2.62l1.45 1.45C23.16 18.16 24 16.68 24 15c0-2.64-2.05-4.78-4.65-4.96zM3 5.27l2.75 2.74C2.56 8.15 0 10.77 0 14c0 3.31 2.69 6 6 6h11.73l2 2L21 20.73 4.27 4 3 5.27zM7.73 10l8 8H6c-2.21 0-4-1.79-4-4s1.79-4 4-4h1.73z"/>
-                        </svg>
-                        <span class="metric-label">RAM Usage:</span>
-                        <span id="ram-usage" class="metric-value">0%</span>
-                    </div>
+
                     <div class="metric-item">
                         <svg class="metric-icon" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M20 18c1.1 0 1.99-.9 1.99-2L22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z"/>
@@ -202,13 +231,7 @@
                         <span class="metric-label">VRAM Allocated:</span>
                         <span id="vram-allocated" class="metric-value">0 MB</span>
                     </div>
-                    <div class="metric-item">
-                        <svg class="metric-icon" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M20 18c1.1 0 1.99-.9 1.99-2L22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z"/>
-                        </svg>
-                        <span class="metric-label">VRAM Usage:</span>
-                        <span id="vram-usage" class="metric-value">0%</span>
-                    </div>
+
                     <div class="metric-item">
                         <svg class="metric-icon" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4c-1.48 0-2.85.43-4.01 1.17l1.46 1.46C10.21 6.23 11.08 6 12 6c3.04 0 5.5 2.46 5.5 5.5v.5H19c1.66 0 3 1.34 3 3 0 1.13-.64 2.11-1.56 2.62l1.45 1.45C23.16 18.16 24 16.68 24 15c0-2.64-2.05-4.78-4.65-4.96zM3 5.27l2.75 2.74C2.56 8.15 0 10.77 0 14c0 3.31 2.69 6 6 6h11.73l2 2L21 20.73 4.27 4 3 5.27zM7.73 10l8 8H6c-2.21 0-4-1.79-4-4s1.79-4 4-4h1.73z"/>

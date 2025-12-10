@@ -220,6 +220,66 @@ header h1 {
     width: 100%;
 }
 
+/* Network Panel */
+.network-panel {
+    margin-bottom: 20px;
+    padding: 20px;
+    background-color: var(--bg-secondary);
+    border-radius: 8px;
+    box-shadow: 0 2px 4px var(--shadow);
+}
+
+.network-panel h3 {
+    font-size: 1.3rem;
+    margin-bottom: 15px;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.network-settings {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.network-info {
+    display: flex;
+    gap: 12px;
+    padding: 15px;
+    background-color: var(--metric-bg);
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    margin-top: 10px;
+}
+
+.network-info .icon {
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.network-info div {
+    flex: 1;
+}
+
+.network-info strong {
+    color: var(--text-primary);
+    font-size: 14px;
+}
+
+.network-info ul {
+    margin-top: 8px;
+    margin-left: 20px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.network-info ul li {
+    margin-bottom: 4px;
+}
+
 /* Metrics */
 .metrics {
     margin-bottom: 20px;
