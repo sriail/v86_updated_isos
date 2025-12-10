@@ -12,11 +12,10 @@ let importedBlobUrls = []; // Track blob URLs for cleanup
 let importedFiles = new Set(); // Track imported file names to avoid double-counting
 let isPointerLocked = false;
 let pointerLockRequested = false;
-let lastInstructionCount = 0;
 let lastMetricsTime = Date.now();
 
 // Performance metrics constants
-const BASELINE_IPS = 50000000; // 50 MIPS baseline for CPU usage estimation (typical x86 emulation speed)
+const BASELINE_IPS = 50000000; // Baseline for CPU usage estimation: 50 million instructions/sec (50 MIPS)
 const RAM_USAGE_BASE = 20; // Base RAM usage percentage
 const RAM_USAGE_MAX = 95; // Maximum RAM usage percentage
 const RAM_USAGE_INTERVAL = 60; // Seconds to increase RAM usage by INCREMENT
@@ -115,7 +114,6 @@ function updateMetrics() {
                 elements.cpuUsageMetric.textContent = `${cpuUsage}%`;
             }
             
-            lastInstructionCount = stats.instructions_per_second || 0;
             lastMetricsTime = currentTime;
         }
     } catch (e) {
