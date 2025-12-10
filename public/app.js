@@ -47,7 +47,9 @@ const elements = {
     mouseLockCancel: document.getElementById('mouse-lock-cancel'),
     networkMode: document.getElementById('network-mode'),
     wispUrl: document.getElementById('wisp-url'),
-    wispUrlContainer: document.getElementById('wisp-url-container')
+    wispUrlContainer: document.getElementById('wisp-url-container'),
+    relayUrl: document.getElementById('relay-url'),
+    relayUrlContainer: document.getElementById('relay-url-container')
 };
 
 // Logging function
@@ -125,7 +127,8 @@ function initEmulator() {
 
     // Get network configuration
     const networkMode = elements.networkMode.value;
-    const wispUrl = elements.wispUrl.value;
+    const wispUrl = elements.wispUrl.value.trim();
+    const relayUrl = elements.relayUrl.value.trim();
 
     const config = {
         wasm_path: "lib/v86.wasm",
@@ -148,14 +151,38 @@ function initEmulator() {
     };
 
     // Add network configuration if enabled
-    if (networkMode === 'wisp' && wispUrl) {
+    if (networkMode === 'wisp') {
+        if (!wispUrl) {
+            log('Error: WISP server URL is required when using WISP mode', 'error');
+            elements.statusMetric.textContent = 'Configuration Error';
+            elements.startBtn.disabled = false;
+            return;
+        }
+        // Validate WISP URL format
+        if (!wispUrl.startsWith('wss://') && !wispUrl.startsWith('ws://')) {
+            log('Error: WISP server URL must start with wss:// or ws://', 'error');
+            elements.statusMetric.textContent = 'Configuration Error';
+            elements.startBtn.disabled = false;
+            return;
+        }
         log(`Enabling network with WISP server: ${wispUrl}`);
         config.network_relay_url = wispUrl;
     } else if (networkMode === 'host') {
-        log('Enabling network with host connection (relay)');
-        // V86 uses websockproxy for network relay
-        // This would require a relay server to be configured
-        config.network_relay_url = 'wss://relay.widgetry.org/'; // Default relay
+        if (!relayUrl) {
+            log('Error: Relay server URL is required when using host connection', 'error');
+            elements.statusMetric.textContent = 'Configuration Error';
+            elements.startBtn.disabled = false;
+            return;
+        }
+        // Validate relay URL format
+        if (!relayUrl.startsWith('wss://') && !relayUrl.startsWith('ws://')) {
+            log('Error: Relay server URL must start with wss:// or ws://', 'error');
+            elements.statusMetric.textContent = 'Configuration Error';
+            elements.startBtn.disabled = false;
+            return;
+        }
+        log(`Enabling network with host connection (relay): ${relayUrl}`);
+        config.network_relay_url = relayUrl;
     } else {
         log('Network disabled');
     }
@@ -187,6 +214,7 @@ function initEmulator() {
             elements.isoSelect.disabled = true;
             elements.networkMode.disabled = true;
             elements.wispUrl.disabled = true;
+            elements.relayUrl.disabled = true;
 
             // Start metrics updates
             metricsInterval = setInterval(updateMetrics, 1000);
@@ -202,6 +230,7 @@ function initEmulator() {
             elements.isoSelect.disabled = false;
             elements.networkMode.disabled = false;
             elements.wispUrl.disabled = false;
+            elements.relayUrl.disabled = false;
             
             if (metricsInterval) {
                 clearInterval(metricsInterval);
@@ -234,6 +263,7 @@ function initEmulator() {
             elements.isoSelect.disabled = false;
             elements.networkMode.disabled = false;
             elements.wispUrl.disabled = false;
+            elements.relayUrl.disabled = false;
         });
 
     } catch (error) {
@@ -245,6 +275,7 @@ function initEmulator() {
         elements.isoSelect.disabled = false;
         elements.networkMode.disabled = false;
         elements.wispUrl.disabled = false;
+        elements.relayUrl.disabled = false;
         console.error(error);
     }
 }
@@ -277,6 +308,7 @@ function stopEmulator() {
         elements.isoSelect.disabled = false;
         elements.networkMode.disabled = false;
         elements.wispUrl.disabled = false;
+        elements.relayUrl.disabled = false;
         
         elements.statusMetric.textContent = 'Stopped';
         
@@ -598,8 +630,13 @@ elements.vramSetting.addEventListener('input', function() {
 elements.networkMode.addEventListener('change', function() {
     if (this.value === 'wisp') {
         elements.wispUrlContainer.style.display = 'block';
+        elements.relayUrlContainer.style.display = 'none';
+    } else if (this.value === 'host') {
+        elements.wispUrlContainer.style.display = 'none';
+        elements.relayUrlContainer.style.display = 'block';
     } else {
         elements.wispUrlContainer.style.display = 'none';
+        elements.relayUrlContainer.style.display = 'none';
     }
 });
 
