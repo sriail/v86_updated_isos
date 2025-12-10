@@ -52,6 +52,22 @@ const elements = {
     relayUrlContainer: document.getElementById('relay-url-container')
 };
 
+// Validate WebSocket URL
+function validateWebSocketUrl(url) {
+    if (!url) {
+        return { valid: false, error: 'URL is required' };
+    }
+    try {
+        const urlObj = new URL(url);
+        if (urlObj.protocol !== 'wss:' && urlObj.protocol !== 'ws:') {
+            return { valid: false, error: 'URL must use wss:// or ws:// protocol' };
+        }
+        return { valid: true };
+    } catch (error) {
+        return { valid: false, error: 'URL is not valid' };
+    }
+}
+
 // Logging function
 function log(message, type = 'info') {
     const time = new Date().toLocaleTimeString();
@@ -146,26 +162,15 @@ function initEmulator() {
         },
         boot_order: 0x123, // Boot from CD-ROM first
         autostart: true,
-        acpi: true, // Enable ACPI for better power management and performance
-        fastboot: true, // Skip BIOS setup to boot faster
+        acpi: true, // Enable ACPI for advanced power management features
+        fastboot: true, // Skip BIOS setup delays for faster boot time
     };
 
     // Add network configuration if enabled
     if (networkMode === 'wisp') {
-        if (!wispUrl) {
-            log('Error: WISP server URL is required when using WISP mode', 'error');
-            elements.statusMetric.textContent = 'Configuration Error';
-            elements.startBtn.disabled = false;
-            return;
-        }
-        // Validate WISP URL format
-        try {
-            const url = new URL(wispUrl);
-            if (url.protocol !== 'wss:' && url.protocol !== 'ws:') {
-                throw new Error('Invalid protocol');
-            }
-        } catch (error) {
-            log('Error: WISP server URL must be a valid WebSocket URL (wss:// or ws://)', 'error');
+        const validation = validateWebSocketUrl(wispUrl);
+        if (!validation.valid) {
+            log(`Error: WISP server URL validation failed - ${validation.error}`, 'error');
             elements.statusMetric.textContent = 'Configuration Error';
             elements.startBtn.disabled = false;
             return;
@@ -173,20 +178,9 @@ function initEmulator() {
         log(`Enabling network with WISP server: ${wispUrl}`);
         config.network_relay_url = wispUrl;
     } else if (networkMode === 'host') {
-        if (!relayUrl) {
-            log('Error: Relay server URL is required when using host connection', 'error');
-            elements.statusMetric.textContent = 'Configuration Error';
-            elements.startBtn.disabled = false;
-            return;
-        }
-        // Validate relay URL format
-        try {
-            const url = new URL(relayUrl);
-            if (url.protocol !== 'wss:' && url.protocol !== 'ws:') {
-                throw new Error('Invalid protocol');
-            }
-        } catch (error) {
-            log('Error: Relay server URL must be a valid WebSocket URL (wss:// or ws://)', 'error');
+        const validation = validateWebSocketUrl(relayUrl);
+        if (!validation.valid) {
+            log(`Error: Relay server URL validation failed - ${validation.error}`, 'error');
             elements.statusMetric.textContent = 'Configuration Error';
             elements.startBtn.disabled = false;
             return;
