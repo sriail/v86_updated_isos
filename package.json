@@ -4,12 +4,16 @@
   "description": "more modern iso's optimized for v86",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js",
+    "wisp": "node wisp-server.js",
+    "relay": "node relay-server.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "v86": "^0.5.292"
+    "v86": "^0.5.292",
+    "@mercuryworkshop/wisp-js": "^0.4.1"
   }
 }
