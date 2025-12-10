@@ -433,16 +433,19 @@ document.addEventListener('fullscreenchange', () => {
 });
 
 // Initial log message
-log('V86 Emulator ready. BIOS files loaded.');
+log('V86 Emulator ready. Multiple OS options available.');
 log('Configuration:');
 log('- Adjust RAM and VRAM settings above');
-log('- Select or import an ISO file');
+log('- Select from available ISOs or import your own');
 log('- Click "Start" to begin emulation');
 log('');
-log('To use SliTaz 5.0:');
-log('1. Download from: http://mirror.slitaz.org/iso/rolling/');
-log('2. Use "Import" button to load the ISO');
-log('3. Or place ISO in public/iso/ directory');
+log('Available Operating Systems:');
+log('- SliTaz 5.0 (32-bit Linux)');
+log('- TinyCore Linux (minimal)');
+log('- Bodhi Linux 5.1.0 Legacy');
+log('- NanoLinux 64 1.3');
+log('- ReactOS 0.4.15 (Windows-like OS)');
+log('- Or import your own ISO file');
 
 // Update status and initial resource metrics
 elements.statusMetric.textContent = 'Ready';
