@@ -23,11 +23,11 @@
             <div class="settings-grid">
                 <div class="setting-item">
                     <label for="ram-setting">RAM (MB):</label>
-                    <input type="number" id="ram-setting" min="64" max="512" value="128" step="64">
+                    <input type="number" id="ram-setting" min="64" max="4096" value="128" step="64">
                 </div>
                 <div class="setting-item">
                     <label for="vram-setting">VRAM (MB):</label>
-                    <input type="number" id="vram-setting" min="2" max="16" value="8" step="2">
+                    <input type="number" id="vram-setting" min="2" max="256" value="8" step="2">
                 </div>
                 <div class="setting-item">
                     <label for="iso-select">ISO:</label>
@@ -67,6 +67,12 @@
                     <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
                 </svg>
                 Fullscreen
+            </button>
+            <button id="cursor-lock-btn" class="btn" title="Lock/Unlock Cursor" disabled>
+                <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M13,9H11V7H13M13,17H11V11H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/>
+                </svg>
+                Lock Cursor
             </button>
             <button id="screenshot-btn" class="btn" title="Take Screenshot" disabled>
                 <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
@@ -109,6 +115,19 @@
             </div>
         </div>
 
+        <!-- Mouse Lock Confirmation Dialog -->
+        <div id="mouse-lock-dialog" class="modal" style="display: none;">
+            <div class="modal-content">
+                <h3>Mouse Lock Requested</h3>
+                <p>The VM wants to lock your mouse cursor. Your mouse will be confined to the emulator window.</p>
+                <p><strong>Press ESC to unlock the mouse at any time.</strong></p>
+                <div class="modal-actions">
+                    <button id="mouse-lock-proceed" class="btn btn-primary">Proceed</button>
+                    <button id="mouse-lock-cancel" class="btn">Cancel</button>
+                </div>
+            </div>
+        </div>
+
         <div class="metrics">
             <div class="metric-group">
                 <h3>Performance Metrics</h3>
@@ -148,6 +167,13 @@
                         <span class="metric-label">Uptime:</span>
                         <span id="uptime-metric" class="metric-value">0s</span>
                     </div>
+                    <div class="metric-item">
+                        <svg class="metric-icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4M12.5,7V12.25L17,14.92L16.25,16.15L11,13V7H12.5Z"/>
+                        </svg>
+                        <span class="metric-label">CPU Usage:</span>
+                        <span id="cpu-usage-metric" class="metric-value">0%</span>
+                    </div>
                 </div>
             </div>
 
@@ -175,6 +201,13 @@
                         </svg>
                         <span class="metric-label">VRAM Allocated:</span>
                         <span id="vram-allocated" class="metric-value">0 MB</span>
+                    </div>
+                    <div class="metric-item">
+                        <svg class="metric-icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M20 18c1.1 0 1.99-.9 1.99-2L22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z"/>
+                        </svg>
+                        <span class="metric-label">VRAM Usage:</span>
+                        <span id="vram-usage" class="metric-value">0%</span>
                     </div>
                     <div class="metric-item">
                         <svg class="metric-icon" viewBox="0 0 24 24" fill="currentColor">
