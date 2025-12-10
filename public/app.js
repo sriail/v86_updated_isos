@@ -108,7 +108,7 @@ function updateMetrics() {
             const currentTime = Date.now();
             const timeDelta = (currentTime - lastMetricsTime) / 1000;
             
-            if (stats.instructions_per_second && timeDelta > 0) {
+            if (stats.instructions_per_second && timeDelta > 0 && BASELINE_IPS > 0) {
                 // Estimate CPU usage based on IPS relative to a baseline
                 const cpuUsage = Math.min(100, Math.round((stats.instructions_per_second / BASELINE_IPS) * 100));
                 elements.cpuUsageMetric.textContent = `${cpuUsage}%`;
@@ -129,11 +129,15 @@ function updateMetrics() {
     
     // Try to get actual memory usage from emulator if available
     // V86 doesn't expose direct RAM usage, so we estimate based on runtime
-    const estimatedRamUsage = Math.min(RAM_USAGE_MAX, Math.floor(RAM_USAGE_BASE + (uptime / RAM_USAGE_INTERVAL) * RAM_USAGE_INCREMENT));
+    const estimatedRamUsage = RAM_USAGE_INTERVAL > 0 
+        ? Math.min(RAM_USAGE_MAX, Math.floor(RAM_USAGE_BASE + (uptime / RAM_USAGE_INTERVAL) * RAM_USAGE_INCREMENT))
+        : RAM_USAGE_BASE;
     elements.ramUsage.textContent = `${estimatedRamUsage}%`;
     
     // VRAM usage estimate (typically lower than RAM)
-    const estimatedVramUsage = Math.min(VRAM_USAGE_MAX, Math.floor(VRAM_USAGE_BASE + (uptime / VRAM_USAGE_INTERVAL) * VRAM_USAGE_INCREMENT));
+    const estimatedVramUsage = VRAM_USAGE_INTERVAL > 0
+        ? Math.min(VRAM_USAGE_MAX, Math.floor(VRAM_USAGE_BASE + (uptime / VRAM_USAGE_INTERVAL) * VRAM_USAGE_INCREMENT))
+        : VRAM_USAGE_BASE;
     elements.vramUsage.textContent = `${estimatedVramUsage}%`;
     
     // Update storage estimate
