@@ -45,6 +45,7 @@ const elements = {
     mouseLockDialog: document.getElementById('mouse-lock-dialog'),
     mouseLockProceed: document.getElementById('mouse-lock-proceed'),
     mouseLockCancel: document.getElementById('mouse-lock-cancel'),
+    mouseLockDontShow: document.getElementById('mouse-lock-dont-show'),
     networkMode: document.getElementById('network-mode'),
     wispUrl: document.getElementById('wisp-url'),
     wispUrlContainer: document.getElementById('wisp-url-container'),
@@ -487,8 +488,17 @@ function requestPointerLock() {
         return;
     }
     
-    pointerLockRequested = true;
-    elements.mouseLockDialog.style.display = 'flex';
+    // Check if user has chosen "do not show again"
+    const dontShowAgain = localStorage.getItem('mouseLockDontShow') === 'true';
+    
+    if (dontShowAgain) {
+        // Directly lock pointer without showing dialog
+        lockPointer();
+    } else {
+        // Show confirmation dialog
+        pointerLockRequested = true;
+        elements.mouseLockDialog.style.display = 'flex';
+    }
 }
 
 function lockPointer() {
@@ -557,6 +567,12 @@ elements.fileInput.addEventListener('change', handleFileImport);
 
 // Mouse lock dialog event listeners
 elements.mouseLockProceed.addEventListener('click', function() {
+    // Save preference if checkbox is checked
+    if (elements.mouseLockDontShow.checked) {
+        localStorage.setItem('mouseLockDontShow', 'true');
+        log('Mouse lock preference saved - dialog will not show again');
+    }
+    
     elements.mouseLockDialog.style.display = 'none';
     lockPointer();
 });
@@ -564,6 +580,9 @@ elements.mouseLockProceed.addEventListener('click', function() {
 elements.mouseLockCancel.addEventListener('click', function() {
     elements.mouseLockDialog.style.display = 'none';
     pointerLockRequested = false;
+    
+    // Reset checkbox for next time
+    elements.mouseLockDontShow.checked = false;
 });
 
 // Pointer lock event listeners
@@ -589,6 +608,12 @@ document.addEventListener('fullscreenchange', () => {
             </svg>
             Exit Fullscreen
         `;
+        
+        // Auto-lock cursor in fullscreen if preference is set and emulator is running
+        const dontShowAgain = localStorage.getItem('mouseLockDontShow') === 'true';
+        if (dontShowAgain && emulator && !isPointerLocked && elements.stopBtn.disabled === false) {
+            requestPointerLock();
+        }
     } else {
         elements.fullscreenBtn.innerHTML = `
             <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
