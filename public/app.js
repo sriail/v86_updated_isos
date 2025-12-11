@@ -17,6 +17,27 @@ let isPaused = false;
 let audioEnabled = true;
 let currentScale = 1;
 
+// Load preferences from localStorage
+function loadPreferences() {
+    const savedAudio = localStorage.getItem('v86AudioEnabled');
+    const savedScale = localStorage.getItem('v86ScreenScale');
+    
+    if (savedAudio !== null) {
+        audioEnabled = savedAudio === 'true';
+        elements.audioEnabled.checked = audioEnabled;
+    }
+    
+    if (savedScale !== null) {
+        elements.screenScale.value = savedScale;
+    }
+}
+
+// Save preferences to localStorage
+function savePreferences() {
+    localStorage.setItem('v86AudioEnabled', audioEnabled.toString());
+    localStorage.setItem('v86ScreenScale', elements.screenScale.value);
+}
+
 // Performance metrics constants - removed estimation constants
 
 // DOM Elements
@@ -117,6 +138,9 @@ function applyScreenScale(scale) {
 // Update metrics
 function updateMetrics() {
     if (!emulator || !startTime) return;
+    
+    // Don't update metrics if paused
+    if (isPaused) return;
 
     const uptime = Math.floor((Date.now() - startTime) / 1000);
     const hours = Math.floor(uptime / 3600);
@@ -133,19 +157,23 @@ function updateMetrics() {
     // Try to get emulator stats
     try {
         const stats = emulator.get_statistics();
-        if (stats) {
+        if (stats && stats.instructions_per_second) {
             // Calculate MIPS (instructions per second / 1,000,000)
-            const mips = stats.instructions_per_second ? 
-                (stats.instructions_per_second / 1000000).toFixed(2) : '0.00';
+            const mips = (stats.instructions_per_second / 1000000).toFixed(2);
             elements.speedMetric.textContent = `${mips} MIPS`;
             
             // Format IPS with commas
-            const ips = stats.instructions_per_second ? 
-                stats.instructions_per_second.toLocaleString() : '0';
+            const ips = Math.floor(stats.instructions_per_second).toLocaleString();
             elements.ipsMetric.textContent = ips;
+        } else {
+            // Still initializing
+            elements.speedMetric.textContent = 'Starting...';
+            elements.ipsMetric.textContent = 'Starting...';
         }
     } catch (e) {
         // Stats might not be available yet
+        elements.speedMetric.textContent = 'N/A';
+        elements.ipsMetric.textContent = 'N/A';
     }
 
     // Memory usage - try to get actual memory info if available
@@ -185,18 +213,22 @@ function initEmulator() {
         screen_container: elements.screenContainer,
         bios: {
             url: "lib/seabios.bin",
+            async: true, // Enable async loading for faster initialization
         },
         vga_bios: {
             url: "lib/vgabios.bin",
+            async: true, // Enable async loading for faster initialization
         },
         cdrom: {
             url: isoPath,
+            async: true, // Enable async loading for CD-ROM
         },
         boot_order: 0x123, // Boot from CD-ROM first
         autostart: true,
         acpi: true, // Enable ACPI for advanced power management features
         fastboot: true, // Skip BIOS setup delays for faster boot time
         disable_speaker: !audioEnabled, // Enable/disable audio based on user preference
+        disable_jit: false, // Ensure JIT is enabled for better performance
     };
 
     // Add network configuration if enabled
@@ -746,6 +778,9 @@ document.addEventListener('fullscreenchange', () => {
     }
 });
 
+// Load user preferences
+loadPreferences();
+
 // Initial log message
 log('V86 Emulator ready. Multiple OS options available.');
 log('Configuration:');
@@ -795,6 +830,12 @@ elements.screenScale.addEventListener('change', function() {
     if (emulator) {
         applyScreenScale(this.value);
     }
+    savePreferences();
+});
+
+// Audio checkbox handler
+elements.audioEnabled.addEventListener('change', function() {
+    savePreferences();
 });
 
 // Cleanup blob URLs on page unload to prevent memory leaks
