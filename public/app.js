@@ -481,6 +481,11 @@ function exportState() {
     }
 }
 
+// Helper function to check if mouse lock dialog should be skipped
+function shouldSkipMouseLockDialog() {
+    return localStorage.getItem('mouseLockDontShow') === 'true';
+}
+
 // Pointer lock functionality
 function requestPointerLock() {
     if (!emulator) {
@@ -488,10 +493,7 @@ function requestPointerLock() {
         return;
     }
     
-    // Check if user has chosen "do not show again"
-    const dontShowAgain = localStorage.getItem('mouseLockDontShow') === 'true';
-    
-    if (dontShowAgain) {
+    if (shouldSkipMouseLockDialog()) {
         // Directly lock pointer without showing dialog
         lockPointer();
     } else {
@@ -593,7 +595,7 @@ document.addEventListener('pointerlockerror', handlePointerLockError);
 elements.screenContainer.addEventListener('click', function() {
     if (emulator && !isPointerLocked && !pointerLockRequested) {
         // Only show dialog if emulator is running
-        if (elements.stopBtn.disabled === false) {
+        if (!elements.stopBtn.disabled) {
             requestPointerLock();
         }
     }
@@ -610,8 +612,7 @@ document.addEventListener('fullscreenchange', () => {
         `;
         
         // Auto-lock cursor in fullscreen if preference is set and emulator is running
-        const dontShowAgain = localStorage.getItem('mouseLockDontShow') === 'true';
-        if (dontShowAgain && emulator && !isPointerLocked && elements.stopBtn.disabled === false) {
+        if (shouldSkipMouseLockDialog() && emulator && !isPointerLocked && !elements.stopBtn.disabled) {
             requestPointerLock();
         }
     } else {
