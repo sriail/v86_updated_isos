@@ -157,7 +157,7 @@ function updateMetrics() {
     // Try to get emulator stats
     try {
         const stats = emulator.get_statistics();
-        if (stats && stats.instructions_per_second) {
+        if (stats && typeof stats.instructions_per_second === 'number' && stats.instructions_per_second > 0) {
             // Calculate MIPS (instructions per second / 1,000,000)
             const mips = (stats.instructions_per_second / 1000000).toFixed(2);
             elements.speedMetric.textContent = `${mips} MIPS`;
@@ -213,15 +213,15 @@ function initEmulator() {
         screen_container: elements.screenContainer,
         bios: {
             url: "lib/seabios.bin",
-            async: true, // Enable async loading for faster initialization
+            async: true,
         },
         vga_bios: {
             url: "lib/vgabios.bin",
-            async: true, // Enable async loading for faster initialization
+            async: true,
         },
         cdrom: {
             url: isoPath,
-            async: true, // Enable async loading for CD-ROM
+            async: true,
         },
         boot_order: 0x123, // Boot from CD-ROM first
         autostart: true,
@@ -264,10 +264,16 @@ function initEmulator() {
             elements.statusMetric.textContent = 'Running';
             startTime = Date.now();
             
-            // Apply screen scaling
-            setTimeout(() => {
-                applyScreenScale(elements.screenScale.value);
-            }, 100);
+            // Apply screen scaling after canvas is ready
+            const applyScalingWhenReady = () => {
+                const canvas = elements.screenContainer.querySelector('canvas');
+                if (canvas) {
+                    applyScreenScale(elements.screenScale.value);
+                } else {
+                    setTimeout(applyScalingWhenReady, 50);
+                }
+            };
+            applyScalingWhenReady();
             
             // Enable controls
             elements.stopBtn.disabled = false;
@@ -471,7 +477,8 @@ function dumpMemory() {
                     const blob = new Blob([state], { type: 'application/octet-stream' });
                     const url = URL.createObjectURL(blob);
                     const link = document.createElement('a');
-                    link.download = `v86-memory-${Date.now()}.bin`;
+                    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+                    link.download = `v86-memory-${timestamp}.bin`;
                     link.href = url;
                     link.click();
                     URL.revokeObjectURL(url);
