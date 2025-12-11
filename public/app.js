@@ -13,6 +13,30 @@ let importedFiles = new Set(); // Track imported file names to avoid double-coun
 let isPointerLocked = false;
 let pointerLockRequested = false;
 let lastMetricsTime = Date.now();
+let isPaused = false;
+let audioEnabled = true;
+let currentScale = 1;
+
+// Load preferences from localStorage
+function loadPreferences() {
+    const savedAudio = localStorage.getItem('v86AudioEnabled');
+    const savedScale = localStorage.getItem('v86ScreenScale');
+    
+    if (savedAudio !== null) {
+        audioEnabled = savedAudio === 'true';
+        elements.audioEnabled.checked = audioEnabled;
+    }
+    
+    if (savedScale !== null) {
+        elements.screenScale.value = savedScale;
+    }
+}
+
+// Save preferences to localStorage
+function savePreferences() {
+    localStorage.setItem('v86AudioEnabled', audioEnabled.toString());
+    localStorage.setItem('v86ScreenScale', elements.screenScale.value);
+}
 
 // Performance metrics constants - removed estimation constants
 
@@ -21,17 +45,21 @@ const elements = {
     startBtn: document.getElementById('start-btn'),
     stopBtn: document.getElementById('stop-btn'),
     resetBtn: document.getElementById('reset-btn'),
+    pauseBtn: document.getElementById('pause-btn'),
     fullscreenBtn: document.getElementById('fullscreen-btn'),
     screenshotBtn: document.getElementById('screenshot-btn'),
     saveStateBtn: document.getElementById('save-state-btn'),
     restoreStateBtn: document.getElementById('restore-state-btn'),
     importIsoBtn: document.getElementById('import-iso-btn'),
     exportStateBtn: document.getElementById('export-state-btn'),
+    dumpMemoryBtn: document.getElementById('dump-memory-btn'),
     cursorLockBtn: document.getElementById('cursor-lock-btn'),
     fileInput: document.getElementById('file-input'),
     ramSetting: document.getElementById('ram-setting'),
     vramSetting: document.getElementById('vram-setting'),
     isoSelect: document.getElementById('iso-select'),
+    audioEnabled: document.getElementById('audio-enabled'),
+    screenScale: document.getElementById('screen-scale'),
     speedMetric: document.getElementById('speed-metric'),
     memoryMetric: document.getElementById('memory-metric'),
     ipsMetric: document.getElementById('ips-metric'),
@@ -84,9 +112,35 @@ function log(message, type = 'info') {
     }
 }
 
+// Apply screen scaling
+function applyScreenScale(scale) {
+    const canvas = elements.screenContainer.querySelector('canvas');
+    if (!canvas) return;
+    
+    if (scale === 'fit') {
+        // Fit to container
+        canvas.style.width = '100%';
+        canvas.style.height = 'auto';
+        canvas.style.maxWidth = '100%';
+        canvas.style.imageRendering = 'auto';
+        log('Screen scaling: Fit to window');
+    } else {
+        const scaleValue = parseFloat(scale);
+        canvas.style.width = `${scaleValue * 100}%`;
+        canvas.style.height = 'auto';
+        canvas.style.maxWidth = 'none';
+        canvas.style.imageRendering = 'crisp-edges';
+        log(`Screen scaling: ${scaleValue * 100}%`);
+    }
+    currentScale = scale;
+}
+
 // Update metrics
 function updateMetrics() {
     if (!emulator || !startTime) return;
+    
+    // Don't update metrics if paused
+    if (isPaused) return;
 
     const uptime = Math.floor((Date.now() - startTime) / 1000);
     const hours = Math.floor(uptime / 3600);
@@ -103,19 +157,23 @@ function updateMetrics() {
     // Try to get emulator stats
     try {
         const stats = emulator.get_statistics();
-        if (stats) {
+        if (stats && typeof stats.instructions_per_second === 'number' && stats.instructions_per_second > 0) {
             // Calculate MIPS (instructions per second / 1,000,000)
-            const mips = stats.instructions_per_second ? 
-                (stats.instructions_per_second / 1000000).toFixed(2) : '0.00';
+            const mips = (stats.instructions_per_second / 1000000).toFixed(2);
             elements.speedMetric.textContent = `${mips} MIPS`;
             
             // Format IPS with commas
-            const ips = stats.instructions_per_second ? 
-                stats.instructions_per_second.toLocaleString() : '0';
+            const ips = Math.floor(stats.instructions_per_second).toLocaleString();
             elements.ipsMetric.textContent = ips;
+        } else {
+            // Still initializing
+            elements.speedMetric.textContent = 'Starting...';
+            elements.ipsMetric.textContent = 'Starting...';
         }
     } catch (e) {
         // Stats might not be available yet
+        elements.speedMetric.textContent = 'N/A';
+        elements.ipsMetric.textContent = 'N/A';
     }
 
     // Memory usage - try to get actual memory info if available
@@ -139,8 +197,9 @@ function initEmulator() {
     ramSize = parseInt(elements.ramSetting.value);
     vramSize = parseInt(elements.vramSetting.value);
     const isoPath = elements.isoSelect.value;
+    audioEnabled = elements.audioEnabled.checked;
 
-    log(`Configuration: RAM=${ramSize}MB, VRAM=${vramSize}MB, ISO=${isoPath}`);
+    log(`Configuration: RAM=${ramSize}MB, VRAM=${vramSize}MB, ISO=${isoPath}, Audio=${audioEnabled ? 'Enabled' : 'Disabled'}`);
 
     // Get network configuration
     const networkMode = elements.networkMode.value;
@@ -154,17 +213,22 @@ function initEmulator() {
         screen_container: elements.screenContainer,
         bios: {
             url: "lib/seabios.bin",
+            async: true,
         },
         vga_bios: {
             url: "lib/vgabios.bin",
+            async: true,
         },
         cdrom: {
             url: isoPath,
+            async: true,
         },
         boot_order: 0x123, // Boot from CD-ROM first
         autostart: true,
         acpi: true, // Enable ACPI for advanced power management features
         fastboot: true, // Skip BIOS setup delays for faster boot time
+        disable_speaker: !audioEnabled, // Enable/disable audio based on user preference
+        disable_jit: false, // Ensure JIT is enabled for better performance
     };
 
     // Add network configuration if enabled
@@ -200,13 +264,26 @@ function initEmulator() {
             elements.statusMetric.textContent = 'Running';
             startTime = Date.now();
             
+            // Apply screen scaling after canvas is ready
+            const applyScalingWhenReady = () => {
+                const canvas = elements.screenContainer.querySelector('canvas');
+                if (canvas) {
+                    applyScreenScale(elements.screenScale.value);
+                } else {
+                    setTimeout(applyScalingWhenReady, 50);
+                }
+            };
+            applyScalingWhenReady();
+            
             // Enable controls
             elements.stopBtn.disabled = false;
             elements.resetBtn.disabled = false;
+            elements.pauseBtn.disabled = false;
             elements.fullscreenBtn.disabled = false;
             elements.screenshotBtn.disabled = false;
             elements.saveStateBtn.disabled = false;
             elements.exportStateBtn.disabled = false;
+            elements.dumpMemoryBtn.disabled = false;
             elements.cursorLockBtn.disabled = false;
             if (savedState) {
                 elements.restoreStateBtn.disabled = false;
@@ -217,6 +294,7 @@ function initEmulator() {
             elements.ramSetting.disabled = true;
             elements.vramSetting.disabled = true;
             elements.isoSelect.disabled = true;
+            elements.audioEnabled.disabled = true;
             elements.networkMode.disabled = true;
             elements.wispUrl.disabled = true;
             elements.relayUrl.disabled = true;
@@ -233,6 +311,7 @@ function initEmulator() {
             elements.ramSetting.disabled = false;
             elements.vramSetting.disabled = false;
             elements.isoSelect.disabled = false;
+            elements.audioEnabled.disabled = false;
             elements.networkMode.disabled = false;
             elements.wispUrl.disabled = false;
             elements.relayUrl.disabled = false;
@@ -266,9 +345,15 @@ function initEmulator() {
             elements.ramSetting.disabled = false;
             elements.vramSetting.disabled = false;
             elements.isoSelect.disabled = false;
+            elements.audioEnabled.disabled = false;
             elements.networkMode.disabled = false;
             elements.wispUrl.disabled = false;
             elements.relayUrl.disabled = false;
+        });
+        
+        // Add listener for when emulator is ready
+        emulator.add_listener("emulator-ready", function() {
+            log('Emulator initialized and ready');
         });
 
     } catch (error) {
@@ -299,11 +384,13 @@ function stopEmulator() {
         // Disable controls
         elements.stopBtn.disabled = true;
         elements.resetBtn.disabled = true;
+        elements.pauseBtn.disabled = true;
         elements.fullscreenBtn.disabled = true;
         elements.screenshotBtn.disabled = true;
         elements.saveStateBtn.disabled = true;
         elements.restoreStateBtn.disabled = true;
         elements.exportStateBtn.disabled = true;
+        elements.dumpMemoryBtn.disabled = true;
         elements.cursorLockBtn.disabled = true;
         elements.startBtn.disabled = false;
         
@@ -311,9 +398,13 @@ function stopEmulator() {
         elements.ramSetting.disabled = false;
         elements.vramSetting.disabled = false;
         elements.isoSelect.disabled = false;
+        elements.audioEnabled.disabled = false;
         elements.networkMode.disabled = false;
         elements.wispUrl.disabled = false;
         elements.relayUrl.disabled = false;
+        
+        // Reset pause state
+        isPaused = false;
         
         elements.statusMetric.textContent = 'Stopped';
         
@@ -330,7 +421,74 @@ function resetEmulator() {
         log('Resetting emulator...');
         emulator.restart();
         startTime = Date.now();
+        isPaused = false;
         elements.statusMetric.textContent = 'Restarting...';
+        // Update pause button UI
+        elements.pauseBtn.innerHTML = `
+            <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
+            </svg>
+            Pause
+        `;
+    }
+}
+
+// Pause/Resume emulator
+function togglePause() {
+    if (emulator) {
+        if (isPaused) {
+            log('Resuming emulation...');
+            emulator.run();
+            isPaused = false;
+            elements.statusMetric.textContent = 'Running';
+            elements.pauseBtn.innerHTML = `
+                <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
+                </svg>
+                Pause
+            `;
+            elements.pauseBtn.title = 'Pause Emulator';
+        } else {
+            log('Pausing emulation...');
+            emulator.stop();
+            isPaused = true;
+            elements.statusMetric.textContent = 'Paused';
+            elements.pauseBtn.innerHTML = `
+                <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M8 5v14l11-7z"/>
+                </svg>
+                Resume
+            `;
+            elements.pauseBtn.title = 'Resume Emulator';
+        }
+    }
+}
+
+// Dump memory
+function dumpMemory() {
+    if (emulator) {
+        log('Dumping memory...');
+        try {
+            emulator.save_state(function(error, state) {
+                if (error) {
+                    log(`Error dumping memory: ${error}`, 'error');
+                } else {
+                    // Create download link for memory dump
+                    const blob = new Blob([state], { type: 'application/octet-stream' });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+                    link.download = `v86-memory-${timestamp}.bin`;
+                    link.href = url;
+                    link.click();
+                    URL.revokeObjectURL(url);
+                    
+                    log(`Memory dumped (${(state.byteLength / 1024 / 1024).toFixed(2)} MB)`);
+                }
+            });
+        } catch (error) {
+            log(`Error dumping memory: ${error.message}`, 'error');
+        }
     }
 }
 
@@ -558,12 +716,14 @@ function handlePointerLockError() {
 elements.startBtn.addEventListener('click', initEmulator);
 elements.stopBtn.addEventListener('click', stopEmulator);
 elements.resetBtn.addEventListener('click', resetEmulator);
+elements.pauseBtn.addEventListener('click', togglePause);
 elements.fullscreenBtn.addEventListener('click', toggleFullscreen);
 elements.screenshotBtn.addEventListener('click', takeScreenshot);
 elements.saveStateBtn.addEventListener('click', saveState);
 elements.restoreStateBtn.addEventListener('click', restoreState);
 elements.importIsoBtn.addEventListener('click', importFile);
 elements.exportStateBtn.addEventListener('click', exportState);
+elements.dumpMemoryBtn.addEventListener('click', dumpMemory);
 elements.cursorLockBtn.addEventListener('click', togglePointerLock);
 elements.fileInput.addEventListener('change', handleFileImport);
 
@@ -625,6 +785,9 @@ document.addEventListener('fullscreenchange', () => {
     }
 });
 
+// Load user preferences
+loadPreferences();
+
 // Initial log message
 log('V86 Emulator ready. Multiple OS options available.');
 log('Configuration:');
@@ -667,6 +830,19 @@ elements.networkMode.addEventListener('change', function() {
         elements.wispUrlContainer.style.display = 'none';
         elements.relayUrlContainer.style.display = 'none';
     }
+});
+
+// Screen scale selection handler
+elements.screenScale.addEventListener('change', function() {
+    if (emulator) {
+        applyScreenScale(this.value);
+    }
+    savePreferences();
+});
+
+// Audio checkbox handler
+elements.audioEnabled.addEventListener('change', function() {
+    savePreferences();
 });
 
 // Cleanup blob URLs on page unload to prevent memory leaks
