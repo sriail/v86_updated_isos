@@ -13,6 +13,9 @@ let importedFiles = new Set(); // Track imported file names to avoid double-coun
 let isPointerLocked = false;
 let pointerLockRequested = false;
 let lastMetricsTime = Date.now();
+let isPaused = false;
+let audioEnabled = true;
+let currentScale = 1;
 
 // Performance metrics constants - removed estimation constants
 
@@ -21,17 +24,21 @@ const elements = {
     startBtn: document.getElementById('start-btn'),
     stopBtn: document.getElementById('stop-btn'),
     resetBtn: document.getElementById('reset-btn'),
+    pauseBtn: document.getElementById('pause-btn'),
     fullscreenBtn: document.getElementById('fullscreen-btn'),
     screenshotBtn: document.getElementById('screenshot-btn'),
     saveStateBtn: document.getElementById('save-state-btn'),
     restoreStateBtn: document.getElementById('restore-state-btn'),
     importIsoBtn: document.getElementById('import-iso-btn'),
     exportStateBtn: document.getElementById('export-state-btn'),
+    dumpMemoryBtn: document.getElementById('dump-memory-btn'),
     cursorLockBtn: document.getElementById('cursor-lock-btn'),
     fileInput: document.getElementById('file-input'),
     ramSetting: document.getElementById('ram-setting'),
     vramSetting: document.getElementById('vram-setting'),
     isoSelect: document.getElementById('iso-select'),
+    audioEnabled: document.getElementById('audio-enabled'),
+    screenScale: document.getElementById('screen-scale'),
     speedMetric: document.getElementById('speed-metric'),
     memoryMetric: document.getElementById('memory-metric'),
     ipsMetric: document.getElementById('ips-metric'),
@@ -82,6 +89,29 @@ function log(message, type = 'info') {
     while (elements.log.children.length > 100) {
         elements.log.removeChild(elements.log.firstChild);
     }
+}
+
+// Apply screen scaling
+function applyScreenScale(scale) {
+    const canvas = elements.screenContainer.querySelector('canvas');
+    if (!canvas) return;
+    
+    if (scale === 'fit') {
+        // Fit to container
+        canvas.style.width = '100%';
+        canvas.style.height = 'auto';
+        canvas.style.maxWidth = '100%';
+        canvas.style.imageRendering = 'auto';
+        log('Screen scaling: Fit to window');
+    } else {
+        const scaleValue = parseFloat(scale);
+        canvas.style.width = `${scaleValue * 100}%`;
+        canvas.style.height = 'auto';
+        canvas.style.maxWidth = 'none';
+        canvas.style.imageRendering = 'crisp-edges';
+        log(`Screen scaling: ${scaleValue * 100}%`);
+    }
+    currentScale = scale;
 }
 
 // Update metrics
@@ -139,8 +169,9 @@ function initEmulator() {
     ramSize = parseInt(elements.ramSetting.value);
     vramSize = parseInt(elements.vramSetting.value);
     const isoPath = elements.isoSelect.value;
+    audioEnabled = elements.audioEnabled.checked;
 
-    log(`Configuration: RAM=${ramSize}MB, VRAM=${vramSize}MB, ISO=${isoPath}`);
+    log(`Configuration: RAM=${ramSize}MB, VRAM=${vramSize}MB, ISO=${isoPath}, Audio=${audioEnabled ? 'Enabled' : 'Disabled'}`);
 
     // Get network configuration
     const networkMode = elements.networkMode.value;
@@ -165,6 +196,7 @@ function initEmulator() {
         autostart: true,
         acpi: true, // Enable ACPI for advanced power management features
         fastboot: true, // Skip BIOS setup delays for faster boot time
+        disable_speaker: !audioEnabled, // Enable/disable audio based on user preference
     };
 
     // Add network configuration if enabled
@@ -200,13 +232,20 @@ function initEmulator() {
             elements.statusMetric.textContent = 'Running';
             startTime = Date.now();
             
+            // Apply screen scaling
+            setTimeout(() => {
+                applyScreenScale(elements.screenScale.value);
+            }, 100);
+            
             // Enable controls
             elements.stopBtn.disabled = false;
             elements.resetBtn.disabled = false;
+            elements.pauseBtn.disabled = false;
             elements.fullscreenBtn.disabled = false;
             elements.screenshotBtn.disabled = false;
             elements.saveStateBtn.disabled = false;
             elements.exportStateBtn.disabled = false;
+            elements.dumpMemoryBtn.disabled = false;
             elements.cursorLockBtn.disabled = false;
             if (savedState) {
                 elements.restoreStateBtn.disabled = false;
@@ -217,6 +256,7 @@ function initEmulator() {
             elements.ramSetting.disabled = true;
             elements.vramSetting.disabled = true;
             elements.isoSelect.disabled = true;
+            elements.audioEnabled.disabled = true;
             elements.networkMode.disabled = true;
             elements.wispUrl.disabled = true;
             elements.relayUrl.disabled = true;
@@ -233,6 +273,7 @@ function initEmulator() {
             elements.ramSetting.disabled = false;
             elements.vramSetting.disabled = false;
             elements.isoSelect.disabled = false;
+            elements.audioEnabled.disabled = false;
             elements.networkMode.disabled = false;
             elements.wispUrl.disabled = false;
             elements.relayUrl.disabled = false;
@@ -266,9 +307,15 @@ function initEmulator() {
             elements.ramSetting.disabled = false;
             elements.vramSetting.disabled = false;
             elements.isoSelect.disabled = false;
+            elements.audioEnabled.disabled = false;
             elements.networkMode.disabled = false;
             elements.wispUrl.disabled = false;
             elements.relayUrl.disabled = false;
+        });
+        
+        // Add listener for when emulator is ready
+        emulator.add_listener("emulator-ready", function() {
+            log('Emulator initialized and ready');
         });
 
     } catch (error) {
@@ -299,11 +346,13 @@ function stopEmulator() {
         // Disable controls
         elements.stopBtn.disabled = true;
         elements.resetBtn.disabled = true;
+        elements.pauseBtn.disabled = true;
         elements.fullscreenBtn.disabled = true;
         elements.screenshotBtn.disabled = true;
         elements.saveStateBtn.disabled = true;
         elements.restoreStateBtn.disabled = true;
         elements.exportStateBtn.disabled = true;
+        elements.dumpMemoryBtn.disabled = true;
         elements.cursorLockBtn.disabled = true;
         elements.startBtn.disabled = false;
         
@@ -311,9 +360,13 @@ function stopEmulator() {
         elements.ramSetting.disabled = false;
         elements.vramSetting.disabled = false;
         elements.isoSelect.disabled = false;
+        elements.audioEnabled.disabled = false;
         elements.networkMode.disabled = false;
         elements.wispUrl.disabled = false;
         elements.relayUrl.disabled = false;
+        
+        // Reset pause state
+        isPaused = false;
         
         elements.statusMetric.textContent = 'Stopped';
         
@@ -330,7 +383,73 @@ function resetEmulator() {
         log('Resetting emulator...');
         emulator.restart();
         startTime = Date.now();
+        isPaused = false;
         elements.statusMetric.textContent = 'Restarting...';
+        // Update pause button UI
+        elements.pauseBtn.innerHTML = `
+            <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
+            </svg>
+            Pause
+        `;
+    }
+}
+
+// Pause/Resume emulator
+function togglePause() {
+    if (emulator) {
+        if (isPaused) {
+            log('Resuming emulation...');
+            emulator.run();
+            isPaused = false;
+            elements.statusMetric.textContent = 'Running';
+            elements.pauseBtn.innerHTML = `
+                <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
+                </svg>
+                Pause
+            `;
+            elements.pauseBtn.title = 'Pause Emulator';
+        } else {
+            log('Pausing emulation...');
+            emulator.stop();
+            isPaused = true;
+            elements.statusMetric.textContent = 'Paused';
+            elements.pauseBtn.innerHTML = `
+                <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M8 5v14l11-7z"/>
+                </svg>
+                Resume
+            `;
+            elements.pauseBtn.title = 'Resume Emulator';
+        }
+    }
+}
+
+// Dump memory
+function dumpMemory() {
+    if (emulator) {
+        log('Dumping memory...');
+        try {
+            emulator.save_state(function(error, state) {
+                if (error) {
+                    log(`Error dumping memory: ${error}`, 'error');
+                } else {
+                    // Create download link for memory dump
+                    const blob = new Blob([state], { type: 'application/octet-stream' });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.download = `v86-memory-${Date.now()}.bin`;
+                    link.href = url;
+                    link.click();
+                    URL.revokeObjectURL(url);
+                    
+                    log(`Memory dumped (${(state.byteLength / 1024 / 1024).toFixed(2)} MB)`);
+                }
+            });
+        } catch (error) {
+            log(`Error dumping memory: ${error.message}`, 'error');
+        }
     }
 }
 
@@ -558,12 +677,14 @@ function handlePointerLockError() {
 elements.startBtn.addEventListener('click', initEmulator);
 elements.stopBtn.addEventListener('click', stopEmulator);
 elements.resetBtn.addEventListener('click', resetEmulator);
+elements.pauseBtn.addEventListener('click', togglePause);
 elements.fullscreenBtn.addEventListener('click', toggleFullscreen);
 elements.screenshotBtn.addEventListener('click', takeScreenshot);
 elements.saveStateBtn.addEventListener('click', saveState);
 elements.restoreStateBtn.addEventListener('click', restoreState);
 elements.importIsoBtn.addEventListener('click', importFile);
 elements.exportStateBtn.addEventListener('click', exportState);
+elements.dumpMemoryBtn.addEventListener('click', dumpMemory);
 elements.cursorLockBtn.addEventListener('click', togglePointerLock);
 elements.fileInput.addEventListener('change', handleFileImport);
 
@@ -666,6 +787,13 @@ elements.networkMode.addEventListener('change', function() {
     } else {
         elements.wispUrlContainer.style.display = 'none';
         elements.relayUrlContainer.style.display = 'none';
+    }
+});
+
+// Screen scale selection handler
+elements.screenScale.addEventListener('change', function() {
+    if (emulator) {
+        applyScreenScale(this.value);
     }
 });
 
