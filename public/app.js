@@ -324,11 +324,18 @@ function initEmulator() {
 
         emulator.add_listener("download-progress", function(e) {
             if (e.file_name && e.loaded !== undefined && e.total !== undefined) {
-                const percent = ((e.loaded / e.total) * 100).toFixed(1);
-                log(`Downloading ${e.file_name}: ${percent}%`);
+                // Prevent division by zero or showing Infinity%
+                if (e.total > 0) {
+                    const percent = ((e.loaded / e.total) * 100).toFixed(1);
+                    log(`Downloading ${e.file_name}: ${percent}%`);
+                } else {
+                    // Show bytes loaded if total size is unknown
+                    const loadedMB = (e.loaded / (1024 * 1024)).toFixed(2);
+                    log(`Downloading ${e.file_name}: ${loadedMB} MB`);
+                }
                 
                 // Track storage estimate - accumulate total storage used
-                if (e.loaded === e.total && !importedFiles.has(e.file_name)) {
+                if (e.total > 0 && e.loaded === e.total && !importedFiles.has(e.file_name)) {
                     storageEstimate += e.total;
                     importedFiles.add(e.file_name);
                 }
