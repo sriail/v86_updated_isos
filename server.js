@@ -84,17 +84,44 @@ const server = http.createServer((req, res) => {
         // Handle Range requests
         if (rangeHeader) {
             const parts = rangeHeader.replace(/bytes=/, '').split('-');
+            
+            // Validate range header format
+            if (parts.length !== 2) {
+                res.writeHead(416, { 'Content-Range': `bytes */${fileSize}` });
+                res.end('Invalid Range header format');
+                return;
+            }
+            
             const start = parseInt(parts[0], 10);
             const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-            const chunkSize = (end - start) + 1;
+            
+            // Validate range values
+            if (isNaN(start) || isNaN(end) || start < 0 || end < 0 || start > end || start >= fileSize) {
+                res.writeHead(416, { 'Content-Range': `bytes */${fileSize}` });
+                res.end('Invalid Range values');
+                return;
+            }
+            
+            // Clamp end to file size
+            const validEnd = Math.min(end, fileSize - 1);
+            const chunkSize = (validEnd - start) + 1;
 
             // Read only the requested range
-            const fileStream = fs.createReadStream(filePath, { start, end });
+            const fileStream = fs.createReadStream(filePath, { start, end: validEnd });
+            
+            // Handle stream errors
+            fileStream.on('error', (streamError) => {
+                console.error(`Error reading file stream: ${streamError.message}`);
+                if (!res.headersSent) {
+                    res.writeHead(500);
+                    res.end('Error reading file');
+                }
+            });
             
             res.writeHead(206, {
                 'Content-Type': contentType,
                 'Content-Length': chunkSize,
-                'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+                'Content-Range': `bytes ${start}-${validEnd}/${fileSize}`,
                 'Accept-Ranges': 'bytes',
                 'Access-Control-Allow-Origin': '*',
                 'Cross-Origin-Embedder-Policy': 'require-corp',
