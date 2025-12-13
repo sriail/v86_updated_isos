@@ -1,0 +1,48 @@
+name:  Copilot coding agent
+
+on:
+  workflow_dispatch: 
+  push:
+    branches: 
+      - main
+  pull_request: 
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Install Git LFS
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git-lfs
+          git lfs install
+
+      - name:  Checkout repository with LFS
+        uses: actions/checkout@v4
+        with: 
+          lfs: true
+          fetch-depth: 0
+
+      - name: Pull LFS objects
+        run: |
+          git lfs pull
+        continue-on-error: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          if [ -f package. json ]; then
+            npm ci || npm install
+          fi
+
+      - name: Run build/test
+        run: |
+          if [ -f package.json ]; then
+            npm run build --if-present
+            npm test --if-present
+          fi
