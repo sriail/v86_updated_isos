@@ -830,12 +830,12 @@ log('- Switch V86 library version using the dropdown in the header');
 log('- Click "Start" to begin emulation');
 log('');
 log('Available Operating Systems (CDN-hosted):');
-log('- TinyCore Linux (minimal, fast boot)');
-log('- NanoLinux 1.4 (ultra-lightweight)');
+log('- TinyCore Linux 13.1 (minimal, fast boot)');
 log('- SliTaz 5.0 (lightweight Linux)');
 log('- SliTaz Rolling Core 5in1');
 log('- Bodhi Linux 5.1.0 Legacy (Ubuntu-based)');
 log('- ReactOS 0.4.14 (Windows-compatible OS)');
+log('- NanoLinux 1.4 (ultra-lightweight)');
 log('- Or import your own ISO file');
 
 // Update status and initial resource metrics

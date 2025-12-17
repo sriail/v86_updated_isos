@@ -1,37 +1,52 @@
 # v86_updated_isos
 
-Modern ISO's optimized for v86 emulation.
+Modern ISO's optimized for v86 emulation with CDN-hosted operating systems.
 
 ## V86 Web Emulator
 
-A clean, feature-rich website that uses the v86 emulator to run SliTaz 5.0 rolling 32-bit Linux distribution with configurable settings and resource monitoring.
+A clean, feature-rich website that uses the v86 emulator to run multiple operating systems with configurable settings and resource monitoring.
 
 ### Screenshot
 
-![V86 Emulator Interface](https://github.com/user-attachments/assets/fdc346be-66fa-4108-88d7-574d5354faa8)
+![V86 Emulator Interface](https://github.com/user-attachments/assets/e62836c0-0c6b-4e37-b547-b9f682a6eb7a)
 
 ### Features
 
 - ✨ Clean, minimalist design
 - 🎨 Automatic dark/light theme based on browser preferences
 - 🌐 **Built-in Network Relay Server** - Network enabled by default using WISP protocol
+- 🔄 **V86 Library Switcher** - Choose between V86 Standard and V86 Modern (@sriail/v86_modern)
+- 📦 **CDN-Hosted Operating Systems** - No need to download ISOs manually
 - ⚙️ **Configurable VM Settings:**
-  - Adjustable RAM (64-512 MB)
-  - Adjustable VRAM (2-16 MB)
-  - ISO selection dropdown
+  - Adjustable RAM (64-4096 MB)
+  - Adjustable VRAM (2-256 MB)
+  - Multiple OS selection from CDN
   - Network configuration (None, WISP, or Host Relay)
 - 📊 **Dual Metrics Dashboard:**
   - Real-time performance metrics (MIPS, memory, instructions/sec, uptime)
-  - Resource consumption monitoring (RAM allocated, RAM usage %, VRAM, storage)
+  - Resource consumption monitoring (RAM allocated, VRAM, storage)
 - 🎮 **Complete control panel:**
   - Start/Stop/Reset emulator
+  - Pause/Resume functionality
   - Fullscreen mode
   - Screenshot capture
   - Save/Restore state
   - **Import ISO/images** - Load ISO files directly from your computer
   - **Export states** - Download emulator state for backup or sharing
+  - Cursor lock support
 - 📝 Live console log
-- 🚫 No CDN dependencies - all files served locally
+- 🚫 No local file downloads required - all ISOs served from CDN
+
+### Available Operating Systems (CDN-Hosted)
+
+All operating systems are automatically downloaded from CDN when you start the emulator:
+
+- **TinyCore Linux 13.1** - Minimal, fast-booting Linux (archive.org)
+- **SliTaz 5.0** - Lightweight Linux distribution (archive.org)
+- **SliTaz Rolling Core 5in1** - Multiple SliTaz variants (archive.org)
+- **Bodhi Linux 5.1.0 Legacy** - Ubuntu-based, elegant desktop (archive.org)
+- **ReactOS 0.4.14** - Windows-compatible open-source OS (archive.org)
+- **NanoLinux 1.4** - Ultra-lightweight Linux (archive.org)
 
 ### Quick Start
 
@@ -41,22 +56,7 @@ A clean, feature-rich website that uses the v86 emulator to run SliTaz 5.0 rolli
    ```
    This installs the v86 package and WISP.js for network relay functionality.
 
-2. **Download BIOS files** (Already included!)
-   The BIOS files (`seabios.bin` and `vgabios.bin`) are already included in the repository for convenience.
-
-3. **Get SliTaz ISO** (Two options)
-   
-   **Option A: Pre-place ISO** (Recommended for first-time setup)
-   - Download SliTaz 5.0 Rolling 32-bit ISO from [SliTaz Mirror](http://mirror.slitaz.org/iso/rolling/)
-   - Recommended: `slitaz-rolling.iso` or `slitaz-rolling-core.iso`
-   - Place the ISO in `public/iso/` directory
-   - Rename to `slitaz-rolling.iso`
-   
-   **Option B: Import at runtime**
-   - Start the web server (see step 4)
-   - Use the **Import** button in the web interface to load any ISO file
-
-4. **Run the server** (Recommended - includes network relay)
+2. **Start the server**
    ```bash
    npm start
    ```
@@ -66,20 +66,12 @@ A clean, feature-rich website that uses the v86 emulator to run SliTaz 5.0 rolli
    - Static file serving for the web interface
    - Network relay using WISP protocol (enabled by default)
    - WebSocket connection on the same port
-   
-   **Alternative methods** (no network relay):
-   ```bash
-   # Using Python
-   cd public && python3 -m http.server 8000
-   
-   # Using Node.js http-server
-   npx http-server public -p 8000
-   ```
+   - CORS support for CDN-hosted ISOs
 
-5. **Configure and Start**
-   - Network relay is already configured by default
+3. **Select and Start**
+   - Choose an operating system from the dropdown (automatically loads from CDN)
+   - Optionally switch between V86 Standard and V86 Modern libraries
    - Adjust RAM and VRAM settings as needed
-   - Select or import an ISO file
    - Click **Start** to begin emulation with network enabled
 
 ### File Structure
@@ -87,19 +79,33 @@ A clean, feature-rich website that uses the v86 emulator to run SliTaz 5.0 rolli
 ```
 .
 ├── public/
-│   ├── index.html          # Main HTML page
+│   ├── index.html          # Main HTML page with library selector
 │   ├── styles.css          # Styling with theme support
-│   ├── app.js              # Emulator controller
+│   ├── app.js              # Emulator controller with dynamic library loading
 │   ├── lib/                # v86 emulator files
-│   │   ├── libv86.js
-│   │   ├── v86.wasm
-│   │   ├── seabios.bin     # (download separately)
-│   │   └── vgabios.bin     # (download separately)
-│   └── iso/                # ISO files directory
-│       └── slitaz-*.iso    # (download separately)
+│   │   ├── libv86.mjs      # V86 module
+│   │   ├── libv86.js       # V86 script version
+│   │   ├── v86.wasm        # V86 WebAssembly
+│   │   ├── seabios.bin     # BIOS files (included)
+│   │   └── vgabios.bin     # VGA BIOS (included)
+│   └── iso/                # Optional local ISO directory
+├── server.js               # HTTP + WISP server with CORS support
 ├── package.json
 └── README.md
 ```
+
+### V86 Library Switcher
+
+The emulator now supports switching between different V86 library versions:
+
+- **V86 (Standard)** - The standard v86 emulator library (currently implemented)
+- **V86 Modern (@sriail/v86_modern)** - Modern variant (infrastructure ready, package to be published)
+
+To switch libraries:
+1. Use the dropdown in the header: "V86 Library"
+2. Select your preferred library version
+3. Confirm the page reload
+4. The selection persists across sessions via localStorage
 
 ### Theme Support
 
@@ -113,19 +119,20 @@ Change your system/browser theme settings to see the interface adapt automatical
 
 #### VM Configuration
 1. **Adjust Settings** (before starting):
-   - **RAM**: Set between 64-512 MB (default: 128 MB)
-   - **VRAM**: Set between 2-16 MB (default: 8 MB)
-   - **ISO**: Select from dropdown or import a new one
+   - **RAM**: Set between 64-4096 MB (default: 128 MB)
+   - **VRAM**: Set between 2-256 MB (default: 8 MB)
+   - **ISO**: Select from CDN-hosted options
+   - **Library**: Choose V86 Standard or V86 Modern
 
-2. **Import ISO/Images**:
-   - Click **Import** button
-   - Select `.iso`, `.img`, or `.state` files
-   - Imported ISOs automatically appear in the dropdown
+2. **Select Operating System**:
+   - Choose from the dropdown menu
+   - ISOs are automatically downloaded from CDN
+   - Or use **Import** button to load local ISO files
 
 3. **Start Emulation**:
    - Click **Start** to initialize with selected settings
    - Settings are locked during emulation
-   - Wait for ISO to load (progress shown in console log)
+   - ISO downloads are shown in console log with progress
 
 #### Control Buttons
 - **Start**: Initialize the emulator with current settings
