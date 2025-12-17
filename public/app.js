@@ -3,18 +3,22 @@
 let V86Starter = null;
 let currentLibrary = localStorage.getItem('v86Library') || 'v86';
 
+// Helper function to get library display name
+function getLibraryDisplayName(libraryType) {
+    return libraryType === 'v86_modern' ? 'V86 Modern' : 'V86 Standard';
+}
+
 // Load the appropriate library
 async function loadV86Library(libraryType) {
     try {
+        // Try to load v86_modern library when available
+        // For now, both options use standard v86 until @sriail/v86_modern is published
         if (libraryType === 'v86_modern') {
-            // Try to load v86_modern library (when available)
-            // For now, fall back to standard v86 until @sriail/v86_modern is published
             console.log('v86_modern library requested but not yet available, using standard v86');
-            V86Starter = (await import('./lib/libv86.mjs')).default;
-        } else {
-            // Load standard v86 library
-            V86Starter = (await import('./lib/libv86.mjs')).default;
         }
+        
+        // Load the v86 library (same for both until v86_modern is available)
+        V86Starter = (await import('./lib/libv86.mjs')).default;
         return true;
     } catch (error) {
         console.error('Error loading v86 library:', error);
@@ -821,7 +825,7 @@ document.addEventListener('fullscreenchange', () => {
 loadPreferences();
 
 // Initial log message
-log(`V86 Emulator ready (using ${currentLibrary === 'v86_modern' ? 'V86 Modern' : 'V86 Standard'} library)`);
+log(`V86 Emulator ready (using ${getLibraryDisplayName(currentLibrary)} library)`);
 log('Multiple OS options available from CDN.');
 log('Configuration:');
 log('- Adjust RAM and VRAM settings above');
@@ -892,7 +896,7 @@ if (elements.v86LibrarySelect) {
             localStorage.setItem('v86Library', newLibrary);
             
             // Show message that page will reload
-            if (confirm(`Switching to ${newLibrary === 'v86_modern' ? 'V86 Modern' : 'V86 Standard'} library.\n\nThe page will reload to apply changes. Continue?`)) {
+            if (confirm(`Switching to ${getLibraryDisplayName(newLibrary)} library.\n\nThe page will reload to apply changes. Continue?`)) {
                 log(`Switching to ${newLibrary} library...`);
                 // Reload the page to reinitialize with new library
                 window.location.reload();
