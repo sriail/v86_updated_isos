@@ -16,7 +16,7 @@ A clean, feature-rich website that uses the v86 emulator to run multiple operati
 - 🎨 Automatic dark/light theme based on browser preferences
 - 🌐 **Built-in Network Relay Server** - Network enabled by default using WISP protocol
 - 🔄 **V86 Library Switcher** - Choose between V86 Standard and V86 Modern (@sriail/v86_modern)
-- 📦 **CDN-Hosted Operating Systems** - No need to download ISOs manually
+- 📦 **Direct Archive.org ISOs** - ISOs loaded directly from archive.org (no proxy needed)
 - ⚙️ **Configurable VM Settings:**
   - Adjustable RAM (64-4096 MB)
   - Adjustable VRAM (2-256 MB)
@@ -35,11 +35,11 @@ A clean, feature-rich website that uses the v86 emulator to run multiple operati
   - **Export states** - Download emulator state for backup or sharing
   - Cursor lock support
 - 📝 Live console log
-- 🚫 No local file downloads required - all ISOs served from CDN
+- 🚫 No proxy needed - ISOs load directly from archive.org
 
-### Available Operating Systems (CDN-Hosted)
+### Available Operating Systems (Archive.org)
 
-All operating systems are automatically downloaded from CDN when you start the emulator:
+All operating systems are loaded directly from archive.org when you start the emulator:
 
 - **TinyCore Linux 13.1** - Minimal, fast-booting Linux (archive.org)
 - **SliTaz 5.0** - Lightweight Linux distribution (archive.org)
@@ -66,10 +66,10 @@ All operating systems are automatically downloaded from CDN when you start the e
    - Static file serving for the web interface
    - Network relay using WISP protocol (enabled by default)
    - WebSocket connection on the same port
-   - CORS support for CDN-hosted ISOs
+   - Direct access to archive.org ISOs (no proxy needed)
 
 3. **Select and Start**
-   - Choose an operating system from the dropdown (automatically loads from CDN)
+   - Choose an operating system from the dropdown (loads directly from archive.org)
    - Optionally switch between V86 Standard and V86 Modern libraries
    - Adjust RAM and VRAM settings as needed
    - Click **Start** to begin emulation with network enabled
@@ -126,7 +126,7 @@ Change your system/browser theme settings to see the interface adapt automatical
 
 2. **Select Operating System**:
    - Choose from the dropdown menu
-   - ISOs are automatically downloaded from CDN
+   - ISOs are loaded directly from archive.org
    - Or use **Import** button to load local ISO files
 
 3. **Start Emulation**:

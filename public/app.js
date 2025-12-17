@@ -851,14 +851,14 @@ loadPreferences();
 
 // Initial log message
 log(`V86 Emulator ready (using ${getLibraryDisplayName(currentLibrary)} library)`);
-log('Multiple OS options available from CDN.');
+log('Multiple OS options available from archive.org.');
 log('Configuration:');
 log('- Adjust RAM and VRAM settings above');
 log('- Select from available ISOs or import your own');
 log('- Switch V86 library version using the dropdown in the header');
 log('- Click "Start" to begin emulation');
 log('');
-log('Available Operating Systems (CDN-hosted):');
+log('Available Operating Systems (loaded directly from archive.org):');
 log('- TinyCore Linux 13.1 (minimal, fast boot)');
 log('- SliTaz 5.0 (lightweight Linux)');
 log('- SliTaz Rolling Core 5in1');

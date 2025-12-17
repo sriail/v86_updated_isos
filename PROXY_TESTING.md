@@ -1,146 +1,177 @@
-# Proxy System Testing Guide
+# Proxy System Documentation
 
-This document explains how to test the improved proxy system that was implemented to fix the 503 errors and preload warnings.
+This document explains the proxy system and how ISOs are loaded in the V86 emulator.
 
-## What Was Fixed
+## Overview
 
-### 1. Preload Resource Warnings
-**Problem:** Browser was warning that preloaded resources (v86.wasm, seabios.bin, vgabios.bin) were not used within a few seconds.
+The application has two separate systems:
 
-**Solution:** Removed the `<link rel="preload">` tags since v86 loads these resources asynchronously. The modulepreload for the main library is kept.
+### 1. ISO Loading (Direct from Archive.org)
+**Purpose:** Load operating system ISO files for the VM
 
-### 2. Proxy 503 Errors  
-**Problem:** The proxy was returning 503 errors when trying to load ISOs from archive.org.
+**How it works:**
+- ISOs are loaded **directly** from archive.org URLs
+- No proxy server is used for ISO downloads
+- The browser fetches ISOs using standard HTTPS requests
+- This avoids 503 errors and network issues with the proxy
 
-**Solution:** 
-- Added automatic redirect following (up to 5 redirects)
-- Improved error handling to return proper HTTP codes (502 for network errors, 503 for upstream server errors)
-- Added User-Agent header for better compatibility
-- Enhanced logging for debugging
+**Benefits:**
+- Simpler architecture - no proxy needed for ISOs
+- Better performance - direct connection to archive.org
+- No 503 errors from proxy failures
+- Standard browser CORS handling
 
-### 3. Error Handling
-**Problem:** The emulator would fail to start if ISO download encountered errors.
+### 2. VM Network Connectivity (WISP Proxy)
+**Purpose:** Provide internet access to the running VM
 
-**Solution:**
-- Non-critical file (ISO) download failures no longer prevent emulator startup
-- The emulator boots to BIOS if the ISO fails to load
-- Clear error messages guide users to import local ISO files
-- Only critical files (BIOS, WASM) will prevent startup
+**How it works:**
+- The WISP (WebSocket Internet Streaming Protocol) server runs on port 8000
+- Provides network relay for the emulated operating system
+- VM traffic is proxied through the WISP server
+- This is completely separate from ISO loading
 
-## Testing in Production
+**Benefits:**
+- VM can access the internet while running
+- Network-enabled operating systems work properly
+- Proxy is only used for VM traffic, not for ISO downloads
 
-When you have proper internet access (not in a sandbox), follow these steps to verify the fixes:
+## What Changed
 
-### Test 1: Verify No Preload Warnings
-1. Start the server: `npm start`
-2. Open browser DevTools (F12) and go to Console tab
-3. Navigate to `http://localhost:8000`
-4. **Expected:** No warnings about unused preloaded resources
-5. **Expected:** Only see modulepreload for libv86.mjs
+### Previous Architecture (Problematic)
+- ISOs were loaded through `/proxy?url=` endpoint
+- Server acted as a proxy between browser and archive.org
+- Frequently resulted in 503 errors due to:
+  - DNS resolution issues
+  - Network timeouts
+  - Sandboxed environments blocking external domains
+  - Archive.org redirects causing issues
 
-### Test 2: Test Proxy with Archive.org ISO
-1. Select "TinyCore Linux 13.1" from the ISO dropdown
-2. Click "Start"
-3. **Expected:** ISO downloads through the proxy
-4. **Expected:** Console shows "Proxying GET request to: https://archive.org/..."
-5. **Expected:** If archive.org redirects, you'll see "Following redirect #X to: ..."
-6. **Expected:** TinyCore Linux boots successfully
+### Current Architecture (Fixed)
+- ISOs load directly from `https://archive.org/download/...` URLs
+- Browser handles the download using native HTTPS
+- Archive.org's CORS headers allow direct access
+- Proxy server remains available only for VM network connectivity (WISP)
 
-### Test 3: Test Fallback to BIOS
-1. Select "None (Boot to BIOS)" from ISO dropdown
-2. Click "Start"  
-3. **Expected:** Emulator starts and shows SeaBIOS screen
-4. **Expected:** Message "Booting from DVD/CD... Boot failed: Could not read from CDROM"
-5. **Expected:** No bootable device message
+## ISO URLs in index.html
 
-### Test 4: Test Error Handling
-To simulate a network error (only if you want to test error handling):
-1. Temporarily block archive.org in your hosts file OR
-2. Modify server.js to reject the domain for testing
-3. Select an ISO and click Start
-4. **Expected:** Emulator shows warning about ISO download failure
-5. **Expected:** Emulator continues to boot to BIOS
-6. **Expected:** User-friendly message: "Failed to download ISO ... The emulator will boot to BIOS."
+The ISOs are now configured as direct URLs:
 
-## Server Logs
-
-When the proxy is working correctly, you should see logs like:
-
-```
-Proxying GET request to: https://archive.org/download/tinycore-linux-13.1/TinyCore-13.1.iso
-Following redirect #1 to: https://ia801404.us.archive.org/27/items/tinycore-linux-13.1/TinyCore-13.1.iso
+```html
+<option value="https://archive.org/download/tinycore-linux-13.1/TinyCore-13.1.iso">TinyCore Linux 13.1</option>
 ```
 
-If there's an error, you'll see:
+Instead of the previous proxied format:
+```html
+<!-- OLD - No longer used -->
+<option value="/proxy?url=https%3A%2F%2Farchive.org%2Fdownload%2F...">...</option>
 ```
-Proxy request error: getaddrinfo ENOTFOUND archive.org
-```
 
-## Browser Console
+## Server Configuration
 
-### Normal Operation (No Errors)
-- v86 library loads
-- BIOS files load successfully  
-- ISO loads through proxy
-- "Emulator started successfully"
+### Proxy Endpoint (Still Available)
+The `/proxy?url=` endpoint remains in server.js for backward compatibility and potential future use, but it's not used for ISOs anymore.
 
-### ISO Download Failure (Graceful Degradation)
-- "Warning: Failed to download ISO ... The emulator will boot to BIOS."
-- "You can still use the emulator, or try importing a local ISO file."
-- Emulator continues to run
+**Current usage:**
+- Available but not actively used by the UI
+- Could be used for other resources if needed
+- Kept for VM network relay functionality
 
-### Critical Error (Blocks Startup)
-- "Critical file download failed. Please refresh the page and try again."
-- Start button re-enabled for retry
-
-## Proxy Endpoint Details
-
-The proxy accepts requests at: `/proxy?url=<encoded_url>`
-
-### Security Features:
-- Only allows archive.org and its subdomains
+**Security:**
+- Only allows archive.org and subdomains
 - Only allows GET and HEAD methods
-- Follows redirects automatically (max 5)
 - 30 second timeout
-- Validates all URLs
+- Max 5 redirects
 
-### Supported Features:
-- Range requests (for partial downloads)
-- Proper CORS headers
-- Content-Length and Accept-Ranges forwarding
-- Streaming response (low memory usage)
+### WISP Server (Active)
+The WISP server handles WebSocket upgrades for VM network connectivity:
 
-## Common Issues and Solutions
+```javascript
+server.on('upgrade', (req, socket, head) => {
+    wisp.routeRequest(req, socket, head);
+});
+```
 
-### Issue: 502 Bad Gateway
-**Cause:** Cannot reach archive.org (network issue)
-**Solution:** Check internet connectivity, firewall rules, DNS resolution
+This provides internet access to the running VM.
 
-### Issue: 504 Gateway Timeout  
-**Cause:** Request took longer than 30 seconds
-**Solution:** Increase PROXY_TIMEOUT_MS in server.js if needed
+## Testing
 
-### Issue: 403 Forbidden
-**Cause:** Trying to proxy a non-archive.org domain
-**Solution:** This is intentional for security - only archive.org is allowed
+### Test 1: Verify Direct ISO Loading
+1. Start the server: `npm start`
+2. Open browser to `http://localhost:8000`
+3. Open DevTools Network tab
+4. Select an ISO from the dropdown
+5. Click "Start"
+6. **Expected:** Browser makes direct HTTPS request to `archive.org`
+7. **Expected:** No requests to `/proxy?url=`
+8. **Expected:** ISO downloads successfully
 
-### Issue: Too many redirects
-**Cause:** More than 5 redirects in the chain
-**Solution:** Increase MAX_REDIRECTS in server.js if legitimate
+### Test 2: Verify VM Network Connectivity
+1. Start an operating system (e.g., TinyCore Linux)
+2. Wait for it to boot
+3. Inside the VM, try to access the internet
+4. **Expected:** Network connectivity works through WISP relay
+5. **Expected:** VM can reach external websites
 
-## Development Testing
+### Test 3: Test in Sandboxed Environment
+1. Even if archive.org is blocked at the network level
+2. The emulator will show a clear error message
+3. **Expected:** "Failed to download ISO" warning
+4. **Expected:** Emulator boots to BIOS
+5. **Expected:** User can import local ISO files
 
-If you're developing and want to test without internet access:
-1. Place ISO files in `public/iso/` directory
-2. Modify `index.html` to point to local files:
-   ```html
-   <option value="iso/your-file.iso">Your Local ISO</option>
-   ```
-3. No proxy needed for local files
+## Common Scenarios
 
-## Performance Notes
+### Scenario 1: User with Internet Access
+- ISOs load directly from archive.org
+- Fast and reliable
+- No proxy needed
 
-- First download is slower (fetching from archive.org)
-- Consider implementing caching for frequently used ISOs
-- Range requests allow resumable downloads
-- Streaming ensures low memory usage even for large ISOs
+### Scenario 2: User Behind Corporate Firewall
+- Archive.org might be blocked
+- ISO download fails gracefully
+- User can import local ISO files
+- VM network relay may or may not work depending on WebSocket support
+
+### Scenario 3: Sandboxed/Offline Environment
+- Archive.org is unreachable
+- ISO download shows error but doesn't crash
+- User must import local ISO files
+- VM network won't work without internet access
+
+## Error Handling
+
+The app gracefully handles ISO download failures:
+
+```javascript
+emulator.add_listener("download-error", function(e) {
+    // Non-critical files (ISOs) allow emulator to continue
+    // Critical files (BIOS, WASM) prevent startup
+});
+```
+
+**For ISO failures:**
+- Warning message in console
+- Emulator boots to BIOS
+- User can import local ISO
+
+**For critical file failures:**
+- Error message displayed
+- Start button re-enabled
+- User must refresh page
+
+## Benefits of Direct Loading
+
+1. **Reliability:** No proxy means fewer points of failure
+2. **Performance:** Direct connection is faster
+3. **Simplicity:** Less server-side complexity
+4. **Compatibility:** Works in more environments
+5. **Maintainability:** Standard browser behavior, no custom proxy logic for ISOs
+
+## Proxy Server Remains Important
+
+While ISOs no longer use the proxy, the proxy server is still critical for:
+- VM network connectivity (WISP protocol)
+- Providing internet access to running VMs
+- Network-enabled features in the emulated OS
+
+The proxy server cannot be removed - it serves a different purpose than ISO loading.
