@@ -21,6 +21,7 @@ const { server: wisp } = require('@mercuryworkshop/wisp-js/server');
 const PORT = process.env.PORT || parseInt(process.argv[2]) || 8000;
 const HOST = process.env.HOST || '0.0.0.0';
 const PUBLIC_DIR = path.join(__dirname, 'public');
+const PROXY_TIMEOUT_MS = 30000; // 30 seconds timeout for proxy requests
 
 // MIME types for common files
 const MIME_TYPES = {
@@ -45,6 +46,13 @@ const MIME_TYPES = {
 const server = http.createServer((req, res) => {
     // Handle CORS proxy requests for external ISOs
     if (req.url.startsWith('/proxy?url=')) {
+        // Only allow GET and HEAD methods for proxy requests
+        if (req.method !== 'GET' && req.method !== 'HEAD') {
+            res.writeHead(405, { 'Content-Type': 'text/plain' });
+            res.end('Method not allowed');
+            return;
+        }
+        
         const urlParam = req.url.substring('/proxy?url='.length);
         const targetUrl = decodeURIComponent(urlParam);
         
@@ -61,7 +69,7 @@ const server = http.createServer((req, res) => {
                 return;
             }
             
-            console.log(`Proxying request to: ${targetUrl}`);
+            console.log(`Proxying ${req.method} request to: ${targetUrl}`);
             
             // Forward the range header if present
             const headers = {};
@@ -97,7 +105,7 @@ const server = http.createServer((req, res) => {
             });
             
             // Set timeout on the request
-            proxyReq.setTimeout(30000, () => {
+            proxyReq.setTimeout(PROXY_TIMEOUT_MS, () => {
                 console.error('Proxy request timeout');
                 proxyReq.destroy();
                 if (!res.headersSent) {
@@ -107,7 +115,7 @@ const server = http.createServer((req, res) => {
             });
             
             proxyReq.on('error', (error) => {
-                console.error(`Proxy error: ${error.message}`);
+                console.error('Proxy request error');
                 if (!res.headersSent) {
                     res.writeHead(502, { 'Content-Type': 'text/plain' });
                     res.end('Proxy request failed');
