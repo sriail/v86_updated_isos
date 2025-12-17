@@ -380,8 +380,8 @@ function initEmulator() {
             const fileName = e.file_name || 'file';
             const statusCode = e.status || 'unknown';
             
-            // Check if it's an ISO file
-            const isIso = fileName && (fileName.includes('.iso') || fileName.includes('.img'));
+            // Check if it's an ISO file (use endsWith for accurate detection)
+            const isIso = fileName && (fileName.endsWith('.iso') || fileName.endsWith('.img'));
             
             if (isIso) {
                 log(`Warning: Failed to download ISO ${fileName} (HTTP ${statusCode}). The emulator will boot to BIOS.`, 'warn');

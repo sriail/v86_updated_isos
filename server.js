@@ -104,8 +104,9 @@ function proxyRequest(targetUrl, clientReq, clientRes, redirectCount = 0) {
                     'Content-Type': 'text/plain',
                     'Access-Control-Allow-Origin': '*',
                 };
+                // Return 502 Bad Gateway for upstream errors
                 if (!clientRes.headersSent) {
-                    clientRes.writeHead(503, responseHeaders);
+                    clientRes.writeHead(502, responseHeaders);
                 }
                 clientRes.end(`Upstream server returned ${proxyRes.statusCode}`);
                 return;
@@ -149,14 +150,18 @@ function proxyRequest(targetUrl, clientReq, clientRes, redirectCount = 0) {
         
         // Handle connection errors
         proxyReq.on('error', (error) => {
-            console.error('Proxy request error:', error.message || error.code || 'UNKNOWN');
+            console.error('Proxy request error:', error.code || 'UNKNOWN', '-', error.message || 'No error message');
             if (!clientRes.headersSent) {
                 clientRes.writeHead(502, { 
                     'Content-Type': 'text/plain',
                     'Access-Control-Allow-Origin': '*'
                 });
             }
-            clientRes.end(`Proxy request failed: ${error.message || 'Network error'}`);
+            const errorMsg = error.code === 'ENOTFOUND' ? 'Could not resolve hostname' : 
+                            error.code === 'ECONNREFUSED' ? 'Connection refused' :
+                            error.code === 'ETIMEDOUT' ? 'Connection timed out' :
+                            'Network error';
+            clientRes.end(`Proxy request failed: ${errorMsg}`);
         });
         
     } catch (error) {
