@@ -6,10 +6,7 @@
     <title>V86 Emulator - Multiple OS Options</title>
     <link rel="stylesheet" href="styles.css">
     
-    <!-- Preload critical resources for faster boot -->
-    <link rel="preload" href="lib/v86.wasm" as="fetch" crossorigin="anonymous">
-    <link rel="preload" href="lib/seabios.bin" as="fetch" crossorigin="anonymous">
-    <link rel="preload" href="lib/vgabios.bin" as="fetch" crossorigin="anonymous">
+    <!-- Modulepreload for the main library - this loads the module and its dependencies -->
     <link rel="modulepreload" href="lib/libv86.mjs">
 </head>
 <body>

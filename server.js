@@ -22,6 +22,7 @@ const PORT = process.env.PORT || parseInt(process.argv[2]) || 8000;
 const HOST = process.env.HOST || '0.0.0.0';
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const PROXY_TIMEOUT_MS = 30000; // 30 seconds timeout for proxy requests
+const MAX_REDIRECTS = 5; // Maximum number of redirects to follow
 
 // MIME types for common files
 const MIME_TYPES = {
@@ -42,6 +43,131 @@ const MIME_TYPES = {
     '.img': 'application/octet-stream',
 };
 
+// Helper function to follow redirects and proxy requests
+function proxyRequest(targetUrl, clientReq, clientRes, redirectCount = 0) {
+    if (redirectCount > MAX_REDIRECTS) {
+        console.error('Too many redirects');
+        if (!clientRes.headersSent) {
+            clientRes.writeHead(502, { 'Content-Type': 'text/plain' });
+        }
+        clientRes.end('Too many redirects');
+        return;
+    }
+    
+    try {
+        const parsedUrl = new URL(targetUrl);
+        // Validate URL is from allowed domains (archive.org)
+        const hostname = parsedUrl.hostname;
+        const isAllowed = hostname === 'archive.org' || hostname.endsWith('.archive.org');
+        
+        if (!isAllowed) {
+            console.error(`Blocked request to disallowed domain: ${hostname}`);
+            if (!clientRes.headersSent) {
+                clientRes.writeHead(403, { 'Content-Type': 'text/plain' });
+            }
+            clientRes.end('Proxy is only allowed for archive.org domains');
+            return;
+        }
+        
+        if (redirectCount === 0) {
+            console.log(`Proxying ${clientReq.method} request to: ${targetUrl}`);
+        } else {
+            console.log(`Following redirect #${redirectCount} to: ${targetUrl}`);
+        }
+        
+        // Forward the range header if present
+        const headers = {
+            'User-Agent': 'Mozilla/5.0 (compatible; V86-Proxy/1.0)',
+        };
+        if (clientReq.headers.range) {
+            headers.Range = clientReq.headers.range;
+        }
+        
+        // Make request to target URL
+        const protocol = parsedUrl.protocol === 'https:' ? https : http;
+        const proxyReq = protocol.get(targetUrl, { headers }, (proxyRes) => {
+            // Handle redirects (3xx status codes)
+            if (proxyRes.statusCode >= 300 && proxyRes.statusCode < 400 && proxyRes.headers.location) {
+                const redirectUrl = new URL(proxyRes.headers.location, targetUrl).href;
+                console.log(`Received redirect (${proxyRes.statusCode}) to: ${redirectUrl}`);
+                // Clean up current request
+                proxyRes.resume(); // Drain the response
+                // Follow the redirect
+                proxyRequest(redirectUrl, clientReq, clientRes, redirectCount + 1);
+                return;
+            }
+            
+            // Handle error responses
+            if (proxyRes.statusCode >= 400) {
+                console.error(`Proxy request failed with status ${proxyRes.statusCode}`);
+                const responseHeaders = {
+                    'Content-Type': 'text/plain',
+                    'Access-Control-Allow-Origin': '*',
+                };
+                if (!clientRes.headersSent) {
+                    clientRes.writeHead(503, responseHeaders);
+                }
+                clientRes.end(`Upstream server returned ${proxyRes.statusCode}`);
+                return;
+            }
+            
+            // Success - forward the response
+            const responseHeaders = {
+                'Content-Type': proxyRes.headers['content-type'] || 'application/octet-stream',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+                'Access-Control-Allow-Headers': 'Range',
+                'Access-Control-Expose-Headers': 'Content-Length, Content-Range, Accept-Ranges'
+            };
+            
+            // Forward important headers
+            if (proxyRes.headers['content-length']) {
+                responseHeaders['Content-Length'] = proxyRes.headers['content-length'];
+            }
+            if (proxyRes.headers['content-range']) {
+                responseHeaders['Content-Range'] = proxyRes.headers['content-range'];
+            }
+            if (proxyRes.headers['accept-ranges']) {
+                responseHeaders['Accept-Ranges'] = proxyRes.headers['accept-ranges'];
+            }
+            
+            if (!clientRes.headersSent) {
+                clientRes.writeHead(proxyRes.statusCode, responseHeaders);
+            }
+            proxyRes.pipe(clientRes);
+        });
+        
+        // Set timeout on the request
+        proxyReq.setTimeout(PROXY_TIMEOUT_MS, () => {
+            console.error('Proxy request timeout');
+            proxyReq.destroy();
+            if (!clientRes.headersSent) {
+                clientRes.writeHead(504, { 'Content-Type': 'text/plain' });
+            }
+            clientRes.end('Proxy request timeout');
+        });
+        
+        // Handle connection errors
+        proxyReq.on('error', (error) => {
+            console.error('Proxy request error:', error.message || error.code || 'UNKNOWN');
+            if (!clientRes.headersSent) {
+                clientRes.writeHead(502, { 
+                    'Content-Type': 'text/plain',
+                    'Access-Control-Allow-Origin': '*'
+                });
+            }
+            clientRes.end(`Proxy request failed: ${error.message || 'Network error'}`);
+        });
+        
+    } catch (error) {
+        console.error('Error parsing URL:', error.message);
+        if (!clientRes.headersSent) {
+            clientRes.writeHead(400, { 'Content-Type': 'text/plain' });
+        }
+        clientRes.end('Invalid URL');
+    }
+}
+
 // Create HTTP server
 const server = http.createServer((req, res) => {
     // Handle CORS proxy requests for external ISOs
@@ -56,80 +182,9 @@ const server = http.createServer((req, res) => {
         const urlParam = req.url.substring('/proxy?url='.length);
         const targetUrl = decodeURIComponent(urlParam);
         
-        // Validate URL is from allowed domains (archive.org)
-        try {
-            const parsedUrl = new URL(targetUrl);
-            // Only allow archive.org and its subdomains (e.g., ia801404.us.archive.org)
-            const hostname = parsedUrl.hostname;
-            const isAllowed = hostname === 'archive.org' || hostname.endsWith('.archive.org');
-            
-            if (!isAllowed) {
-                res.writeHead(403, { 'Content-Type': 'text/plain' });
-                res.end('Proxy is only allowed for archive.org domains');
-                return;
-            }
-            
-            console.log(`Proxying ${req.method} request to: ${targetUrl}`);
-            
-            // Forward the range header if present
-            const headers = {};
-            if (req.headers.range) {
-                headers.Range = req.headers.range;
-            }
-            
-            // Make request to target URL
-            const protocol = parsedUrl.protocol === 'https:' ? https : http;
-            const proxyReq = protocol.get(targetUrl, { headers }, (proxyRes) => {
-                // Forward status code and headers
-                const responseHeaders = {
-                    'Content-Type': proxyRes.headers['content-type'] || 'application/octet-stream',
-                    'Access-Control-Allow-Origin': '*',
-                    'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
-                    'Access-Control-Allow-Headers': 'Range',
-                    'Access-Control-Expose-Headers': 'Content-Length, Content-Range, Accept-Ranges'
-                };
-                
-                // Forward important headers
-                if (proxyRes.headers['content-length']) {
-                    responseHeaders['Content-Length'] = proxyRes.headers['content-length'];
-                }
-                if (proxyRes.headers['content-range']) {
-                    responseHeaders['Content-Range'] = proxyRes.headers['content-range'];
-                }
-                if (proxyRes.headers['accept-ranges']) {
-                    responseHeaders['Accept-Ranges'] = proxyRes.headers['accept-ranges'];
-                }
-                
-                res.writeHead(proxyRes.statusCode, responseHeaders);
-                proxyRes.pipe(res);
-            });
-            
-            // Set timeout on the request
-            proxyReq.setTimeout(PROXY_TIMEOUT_MS, () => {
-                console.error('Proxy request timeout');
-                proxyReq.destroy();
-                if (!res.headersSent) {
-                    res.writeHead(504, { 'Content-Type': 'text/plain' });
-                }
-                res.end('Proxy request timeout');
-            });
-            
-            // Handle connection errors
-            proxyReq.on('error', (error) => {
-                // Log full error for debugging, but send generic message to client
-                console.error('Proxy request error:', error.code || 'UNKNOWN');
-                if (!res.headersSent) {
-                    res.writeHead(502, { 'Content-Type': 'text/plain' });
-                }
-                res.end('Proxy request failed');
-            });
-            
-            return;
-        } catch (error) {
-            res.writeHead(400, { 'Content-Type': 'text/plain' });
-            res.end('Invalid URL');
-            return;
-        }
+        // Use the new proxy function that handles redirects
+        proxyRequest(targetUrl, req, res);
+        return;
     }
     
     // Handle OPTIONS requests for CORS preflight

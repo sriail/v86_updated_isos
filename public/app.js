@@ -378,7 +378,17 @@ function initEmulator() {
 
         emulator.add_listener("download-error", function(e) {
             const fileName = e.file_name || 'file';
-            log(`Error downloading ${fileName}. The emulator will continue without it.`, 'error');
+            const statusCode = e.status || 'unknown';
+            
+            // Check if it's an ISO file
+            const isIso = fileName && (fileName.includes('.iso') || fileName.includes('.img'));
+            
+            if (isIso) {
+                log(`Warning: Failed to download ISO ${fileName} (HTTP ${statusCode}). The emulator will boot to BIOS.`, 'warn');
+                log('You can still use the emulator, or try importing a local ISO file.', 'info');
+            } else {
+                log(`Error downloading ${fileName} (HTTP ${statusCode}). The emulator will continue without it.`, 'error');
+            }
             
             // Don't treat download errors as fatal - the emulator can still run
             // Just log the error and continue
@@ -388,6 +398,7 @@ function initEmulator() {
             
             if (isCritical) {
                 elements.statusMetric.textContent = 'Download Error';
+                log('Critical file download failed. Please refresh the page and try again.', 'error');
                 
                 // Re-enable start button and settings on critical error
                 elements.startBtn.disabled = false;
