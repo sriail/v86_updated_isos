@@ -248,10 +248,6 @@ function initEmulator() {
             url: "lib/vgabios.bin",
             async: true,
         },
-        cdrom: {
-            url: isoPath,
-            async: true,
-        },
         boot_order: 0x123, // Boot from CD-ROM first
         autostart: true,
         acpi: true, // Enable ACPI for advanced power management features
@@ -259,6 +255,15 @@ function initEmulator() {
         disable_speaker: !audioEnabled, // Enable/disable audio based on user preference
         disable_jit: false, // Ensure JIT is enabled for better performance
     };
+
+    // Only add CD-ROM if ISO path is provided and valid
+    // This allows the emulator to start even without an ISO
+    if (isoPath?.trim()) {
+        config.cdrom = {
+            url: isoPath,
+            async: true,
+        };
+    }
 
     // Add network configuration if enabled
     if (networkMode === 'wisp') {
@@ -373,18 +378,27 @@ function initEmulator() {
 
         emulator.add_listener("download-error", function(e) {
             const fileName = e.file_name || 'file';
-            log(`Error downloading ${fileName}. Please check the file exists.`, 'error');
-            elements.statusMetric.textContent = 'Download Error';
+            log(`Error downloading ${fileName}. The emulator will continue without it.`, 'error');
             
-            // Re-enable start button and settings on error
-            elements.startBtn.disabled = false;
-            elements.ramSetting.disabled = false;
-            elements.vramSetting.disabled = false;
-            elements.isoSelect.disabled = false;
-            elements.audioEnabled.disabled = false;
-            elements.networkMode.disabled = false;
-            elements.wispUrl.disabled = false;
-            elements.relayUrl.disabled = false;
+            // Don't treat download errors as fatal - the emulator can still run
+            // Just log the error and continue
+            // Only disable start button if it's a critical file (BIOS/WASM)
+            const criticalFiles = ['seabios.bin', 'vgabios.bin', 'v86.wasm', 'v86-debug.wasm', 'v86-fallback.wasm'];
+            const isCritical = criticalFiles.some(critFile => fileName === critFile);
+            
+            if (isCritical) {
+                elements.statusMetric.textContent = 'Download Error';
+                
+                // Re-enable start button and settings on critical error
+                elements.startBtn.disabled = false;
+                elements.ramSetting.disabled = false;
+                elements.vramSetting.disabled = false;
+                elements.isoSelect.disabled = false;
+                elements.audioEnabled.disabled = false;
+                elements.networkMode.disabled = false;
+                elements.wispUrl.disabled = false;
+                elements.relayUrl.disabled = false;
+            }
         });
         
         // Add listener for when emulator is ready
