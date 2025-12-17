@@ -258,7 +258,7 @@ function initEmulator() {
 
     // Only add CD-ROM if ISO path is provided and valid
     // This allows the emulator to start even without an ISO
-    if (isoPath && isoPath.trim() !== '') {
+    if (isoPath?.trim()) {
         config.cdrom = {
             url: isoPath,
             async: true,
@@ -383,7 +383,10 @@ function initEmulator() {
             // Don't treat download errors as fatal - the emulator can still run
             // Just log the error and continue
             // Only disable start button if it's a critical file (BIOS/WASM)
-            if (fileName.includes('seabios') || fileName.includes('vgabios') || fileName.includes('wasm')) {
+            const criticalFiles = ['seabios.bin', 'vgabios.bin', 'v86.wasm', 'v86-debug.wasm', 'v86-fallback.wasm'];
+            const isCritical = criticalFiles.some(critFile => fileName === critFile);
+            
+            if (isCritical) {
                 elements.statusMetric.textContent = 'Download Error';
                 
                 // Re-enable start button and settings on critical error
