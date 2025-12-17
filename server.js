@@ -110,16 +110,18 @@ const server = http.createServer((req, res) => {
                 proxyReq.destroy();
                 if (!res.headersSent) {
                     res.writeHead(504, { 'Content-Type': 'text/plain' });
-                    res.end('Proxy request timeout');
                 }
+                res.end('Proxy request timeout');
             });
             
+            // Handle connection errors
             proxyReq.on('error', (error) => {
-                console.error('Proxy request error');
+                // Log full error for debugging, but send generic message to client
+                console.error('Proxy request error:', error.code || 'UNKNOWN');
                 if (!res.headersSent) {
                     res.writeHead(502, { 'Content-Type': 'text/plain' });
-                    res.end('Proxy request failed');
                 }
+                res.end('Proxy request failed');
             });
             
             return;
