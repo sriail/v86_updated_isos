@@ -51,7 +51,11 @@ const server = http.createServer((req, res) => {
         // Validate URL is from allowed domains (archive.org)
         try {
             const parsedUrl = new URL(targetUrl);
-            if (!parsedUrl.hostname.endsWith('archive.org')) {
+            // Only allow archive.org and its subdomains (e.g., ia801404.us.archive.org)
+            const hostname = parsedUrl.hostname;
+            const isAllowed = hostname === 'archive.org' || hostname.endsWith('.archive.org');
+            
+            if (!isAllowed) {
                 res.writeHead(403, { 'Content-Type': 'text/plain' });
                 res.end('Proxy is only allowed for archive.org domains');
                 return;
@@ -65,9 +69,9 @@ const server = http.createServer((req, res) => {
                 headers.Range = req.headers.range;
             }
             
-            // Make request to target URL
+            // Make request to target URL with timeout
             const protocol = parsedUrl.protocol === 'https:' ? https : http;
-            const proxyReq = protocol.get(targetUrl, { headers }, (proxyRes) => {
+            const proxyReq = protocol.get(targetUrl, { headers, timeout: 30000 }, (proxyRes) => {
                 // Forward status code and headers
                 const responseHeaders = {
                     'Content-Type': proxyRes.headers['content-type'] || 'application/octet-stream',
@@ -96,7 +100,16 @@ const server = http.createServer((req, res) => {
                 console.error(`Proxy error: ${error.message}`);
                 if (!res.headersSent) {
                     res.writeHead(502, { 'Content-Type': 'text/plain' });
-                    res.end(`Proxy error: ${error.message}`);
+                    res.end('Proxy request failed');
+                }
+            });
+            
+            proxyReq.on('timeout', () => {
+                console.error('Proxy request timeout');
+                proxyReq.destroy();
+                if (!res.headersSent) {
+                    res.writeHead(504, { 'Content-Type': 'text/plain' });
+                    res.end('Proxy request timeout');
                 }
             });
             
