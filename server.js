@@ -12,8 +12,10 @@
  */
 
 const http = require('http');
+const https = require('https');
 const fs = require('fs');
 const path = require('path');
+const { URL } = require('url');
 const { server: wisp } = require('@mercuryworkshop/wisp-js/server');
 
 const PORT = process.env.PORT || parseInt(process.argv[2]) || 8000;
@@ -41,6 +43,83 @@ const MIME_TYPES = {
 
 // Create HTTP server
 const server = http.createServer((req, res) => {
+    // Handle CORS proxy requests for external ISOs
+    if (req.url.startsWith('/proxy?url=')) {
+        const urlParam = req.url.substring('/proxy?url='.length);
+        const targetUrl = decodeURIComponent(urlParam);
+        
+        // Validate URL is from allowed domains (archive.org)
+        try {
+            const parsedUrl = new URL(targetUrl);
+            if (!parsedUrl.hostname.endsWith('archive.org')) {
+                res.writeHead(403, { 'Content-Type': 'text/plain' });
+                res.end('Proxy is only allowed for archive.org domains');
+                return;
+            }
+            
+            console.log(`Proxying request to: ${targetUrl}`);
+            
+            // Forward the range header if present
+            const headers = {};
+            if (req.headers.range) {
+                headers.Range = req.headers.range;
+            }
+            
+            // Make request to target URL
+            const protocol = parsedUrl.protocol === 'https:' ? https : http;
+            const proxyReq = protocol.get(targetUrl, { headers }, (proxyRes) => {
+                // Forward status code and headers
+                const responseHeaders = {
+                    'Content-Type': proxyRes.headers['content-type'] || 'application/octet-stream',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+                    'Access-Control-Allow-Headers': 'Range',
+                    'Access-Control-Expose-Headers': 'Content-Length, Content-Range, Accept-Ranges'
+                };
+                
+                // Forward important headers
+                if (proxyRes.headers['content-length']) {
+                    responseHeaders['Content-Length'] = proxyRes.headers['content-length'];
+                }
+                if (proxyRes.headers['content-range']) {
+                    responseHeaders['Content-Range'] = proxyRes.headers['content-range'];
+                }
+                if (proxyRes.headers['accept-ranges']) {
+                    responseHeaders['Accept-Ranges'] = proxyRes.headers['accept-ranges'];
+                }
+                
+                res.writeHead(proxyRes.statusCode, responseHeaders);
+                proxyRes.pipe(res);
+            });
+            
+            proxyReq.on('error', (error) => {
+                console.error(`Proxy error: ${error.message}`);
+                if (!res.headersSent) {
+                    res.writeHead(502, { 'Content-Type': 'text/plain' });
+                    res.end(`Proxy error: ${error.message}`);
+                }
+            });
+            
+            return;
+        } catch (error) {
+            res.writeHead(400, { 'Content-Type': 'text/plain' });
+            res.end('Invalid URL');
+            return;
+        }
+    }
+    
+    // Handle OPTIONS requests for CORS preflight
+    if (req.method === 'OPTIONS') {
+        res.writeHead(200, {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+            'Access-Control-Allow-Headers': 'Range',
+            'Access-Control-Max-Age': '86400'
+        });
+        res.end();
+        return;
+    }
+    
     // Parse URL
     let filePath = path.join(PUBLIC_DIR, req.url === '/' ? 'index.html' : req.url);
     
