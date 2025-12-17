@@ -554,18 +554,23 @@ header h1 {
 
 .library-info {
     cursor: help;
-    font-size: 1.2rem;
     color: var(--text-muted);
     background: none;
     border: none;
     padding: 0;
+    margin-left: 4px;
     display: inline-flex;
     align-items: center;
-    filter: grayscale(100%);
-    opacity: 0.7;
-    transition: opacity 0.2s;
+    justify-content: center;
+    vertical-align: middle;
+    transition: color 0.2s;
 }
 
 .library-info:hover {
-    opacity: 1;
+    color: var(--text-primary);
+}
+
+.library-info .icon {
+    width: 18px;
+    height: 18px;
 }

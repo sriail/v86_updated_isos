@@ -12,13 +12,16 @@
  */
 
 const http = require('http');
+const https = require('https');
 const fs = require('fs');
 const path = require('path');
+const { URL } = require('url');
 const { server: wisp } = require('@mercuryworkshop/wisp-js/server');
 
 const PORT = process.env.PORT || parseInt(process.argv[2]) || 8000;
 const HOST = process.env.HOST || '0.0.0.0';
 const PUBLIC_DIR = path.join(__dirname, 'public');
+const PROXY_TIMEOUT_MS = 30000; // 30 seconds timeout for proxy requests
 
 // MIME types for common files
 const MIME_TYPES = {
@@ -41,6 +44,106 @@ const MIME_TYPES = {
 
 // Create HTTP server
 const server = http.createServer((req, res) => {
+    // Handle CORS proxy requests for external ISOs
+    if (req.url.startsWith('/proxy?url=')) {
+        // Only allow GET and HEAD methods for proxy requests
+        if (req.method !== 'GET' && req.method !== 'HEAD') {
+            res.writeHead(405, { 'Content-Type': 'text/plain' });
+            res.end('Method not allowed');
+            return;
+        }
+        
+        const urlParam = req.url.substring('/proxy?url='.length);
+        const targetUrl = decodeURIComponent(urlParam);
+        
+        // Validate URL is from allowed domains (archive.org)
+        try {
+            const parsedUrl = new URL(targetUrl);
+            // Only allow archive.org and its subdomains (e.g., ia801404.us.archive.org)
+            const hostname = parsedUrl.hostname;
+            const isAllowed = hostname === 'archive.org' || hostname.endsWith('.archive.org');
+            
+            if (!isAllowed) {
+                res.writeHead(403, { 'Content-Type': 'text/plain' });
+                res.end('Proxy is only allowed for archive.org domains');
+                return;
+            }
+            
+            console.log(`Proxying ${req.method} request to: ${targetUrl}`);
+            
+            // Forward the range header if present
+            const headers = {};
+            if (req.headers.range) {
+                headers.Range = req.headers.range;
+            }
+            
+            // Make request to target URL
+            const protocol = parsedUrl.protocol === 'https:' ? https : http;
+            const proxyReq = protocol.get(targetUrl, { headers }, (proxyRes) => {
+                // Forward status code and headers
+                const responseHeaders = {
+                    'Content-Type': proxyRes.headers['content-type'] || 'application/octet-stream',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+                    'Access-Control-Allow-Headers': 'Range',
+                    'Access-Control-Expose-Headers': 'Content-Length, Content-Range, Accept-Ranges'
+                };
+                
+                // Forward important headers
+                if (proxyRes.headers['content-length']) {
+                    responseHeaders['Content-Length'] = proxyRes.headers['content-length'];
+                }
+                if (proxyRes.headers['content-range']) {
+                    responseHeaders['Content-Range'] = proxyRes.headers['content-range'];
+                }
+                if (proxyRes.headers['accept-ranges']) {
+                    responseHeaders['Accept-Ranges'] = proxyRes.headers['accept-ranges'];
+                }
+                
+                res.writeHead(proxyRes.statusCode, responseHeaders);
+                proxyRes.pipe(res);
+            });
+            
+            // Set timeout on the request
+            proxyReq.setTimeout(PROXY_TIMEOUT_MS, () => {
+                console.error('Proxy request timeout');
+                proxyReq.destroy();
+                if (!res.headersSent) {
+                    res.writeHead(504, { 'Content-Type': 'text/plain' });
+                }
+                res.end('Proxy request timeout');
+            });
+            
+            // Handle connection errors
+            proxyReq.on('error', (error) => {
+                // Log full error for debugging, but send generic message to client
+                console.error('Proxy request error:', error.code || 'UNKNOWN');
+                if (!res.headersSent) {
+                    res.writeHead(502, { 'Content-Type': 'text/plain' });
+                }
+                res.end('Proxy request failed');
+            });
+            
+            return;
+        } catch (error) {
+            res.writeHead(400, { 'Content-Type': 'text/plain' });
+            res.end('Invalid URL');
+            return;
+        }
+    }
+    
+    // Handle OPTIONS requests for CORS preflight
+    if (req.method === 'OPTIONS') {
+        res.writeHead(200, {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+            'Access-Control-Allow-Headers': 'Range',
+            'Access-Control-Max-Age': '86400'
+        });
+        res.end();
+        return;
+    }
+    
     // Parse URL
     let filePath = path.join(PUBLIC_DIR, req.url === '/' ? 'index.html' : req.url);
     

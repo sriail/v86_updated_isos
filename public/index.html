@@ -23,7 +23,11 @@
                     <option value="v86" selected>V86 (Standard)</option>
                     <option value="v86_modern">V86 Modern (@sriail/v86_modern)</option>
                 </select>
-                <span class="library-info" title="Select which v86 library to use. Change requires page reload." aria-label="Library selector information">ℹ️</span>
+                <span class="library-info" title="Select which v86 library to use. Change requires page reload." aria-label="Library selector information">
+                    <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M13,9H11V7H13M13,17H11V11H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/>
+                    </svg>
+                </span>
             </div>
         </header>
 
@@ -47,12 +51,12 @@
                     <label for="iso-select">ISO:</label>
                     <select id="iso-select">
                         <option value="">None (Boot to BIOS)</option>
-                        <option value="https://archive.org/download/tinycore-linux-13.1/TinyCore-13.1.iso" selected>TinyCore Linux 13.1</option>
-                        <option value="https://archive.org/download/slitaz-5.0/slitaz-5.0.iso">SliTaz 5.0</option>
-                        <option value="https://archive.org/download/slitaz-rolling-core-5in1/slitaz-rolling-core-5in1.iso">SliTaz Rolling Core 5in1</option>
-                        <option value="https://archive.org/download/bodhi-5.1.0-legacy/bodhi-5.1.0-legacy.iso">Bodhi Linux 5.1.0 Legacy</option>
-                        <option value="https://archive.org/download/ReactOS_0.4.14/ReactOS-0.4.14-release-106-gdb1c396-live.iso">ReactOS 0.4.14</option>
-                        <option value="https://archive.org/download/nanolinux-1.4/nanolinux-1.4.iso">NanoLinux 1.4</option>
+                        <option value="/proxy?url=https%3A%2F%2Farchive.org%2Fdownload%2Ftinycore-linux-13.1%2FTinyCore-13.1.iso" selected>TinyCore Linux 13.1</option>
+                        <option value="/proxy?url=https%3A%2F%2Farchive.org%2Fdownload%2Fslitaz-5.0%2Fslitaz-5.0.iso">SliTaz 5.0</option>
+                        <option value="/proxy?url=https%3A%2F%2Farchive.org%2Fdownload%2Fslitaz-rolling-core-5in1%2Fslitaz-rolling-core-5in1.iso">SliTaz Rolling Core 5in1</option>
+                        <option value="/proxy?url=https%3A%2F%2Farchive.org%2Fdownload%2Fbodhi-5.1.0-legacy%2Fbodhi-5.1.0-legacy.iso">Bodhi Linux 5.1.0 Legacy</option>
+                        <option value="/proxy?url=https%3A%2F%2Farchive.org%2Fdownload%2FReactOS_0.4.14%2FReactOS-0.4.14-release-106-gdb1c396-live.iso">ReactOS 0.4.14</option>
+                        <option value="/proxy?url=https%3A%2F%2Farchive.org%2Fdownload%2Fnanolinux-1.4%2Fnanolinux-1.4.iso">NanoLinux 1.4</option>
                     </select>
                 </div>
                 <div class="setting-item">
