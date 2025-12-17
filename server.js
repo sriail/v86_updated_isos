@@ -69,9 +69,9 @@ const server = http.createServer((req, res) => {
                 headers.Range = req.headers.range;
             }
             
-            // Make request to target URL with timeout
+            // Make request to target URL
             const protocol = parsedUrl.protocol === 'https:' ? https : http;
-            const proxyReq = protocol.get(targetUrl, { headers, timeout: 30000 }, (proxyRes) => {
+            const proxyReq = protocol.get(targetUrl, { headers }, (proxyRes) => {
                 // Forward status code and headers
                 const responseHeaders = {
                     'Content-Type': proxyRes.headers['content-type'] || 'application/octet-stream',
@@ -96,20 +96,21 @@ const server = http.createServer((req, res) => {
                 proxyRes.pipe(res);
             });
             
-            proxyReq.on('error', (error) => {
-                console.error(`Proxy error: ${error.message}`);
-                if (!res.headersSent) {
-                    res.writeHead(502, { 'Content-Type': 'text/plain' });
-                    res.end('Proxy request failed');
-                }
-            });
-            
-            proxyReq.on('timeout', () => {
+            // Set timeout on the request
+            proxyReq.setTimeout(30000, () => {
                 console.error('Proxy request timeout');
                 proxyReq.destroy();
                 if (!res.headersSent) {
                     res.writeHead(504, { 'Content-Type': 'text/plain' });
                     res.end('Proxy request timeout');
+                }
+            });
+            
+            proxyReq.on('error', (error) => {
+                console.error(`Proxy error: ${error.message}`);
+                if (!res.headersSent) {
+                    res.writeHead(502, { 'Content-Type': 'text/plain' });
+                    res.end('Proxy request failed');
                 }
             });
             
