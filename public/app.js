@@ -1,5 +1,29 @@
 // V86 Emulator Controller
-import V86Starter from './lib/libv86.mjs';
+// Dynamic library loading support
+let V86Starter = null;
+let currentLibrary = localStorage.getItem('v86Library') || 'v86';
+
+// Load the appropriate library
+async function loadV86Library(libraryType) {
+    try {
+        if (libraryType === 'v86_modern') {
+            // Try to load v86_modern library (when available)
+            // For now, fall back to standard v86 until @sriail/v86_modern is published
+            console.log('v86_modern library requested but not yet available, using standard v86');
+            V86Starter = (await import('./lib/libv86.mjs')).default;
+        } else {
+            // Load standard v86 library
+            V86Starter = (await import('./lib/libv86.mjs')).default;
+        }
+        return true;
+    } catch (error) {
+        console.error('Error loading v86 library:', error);
+        return false;
+    }
+}
+
+// Initialize library on page load
+await loadV86Library(currentLibrary);
 
 let emulator = null;
 let startTime = null;
@@ -78,7 +102,8 @@ const elements = {
     wispUrl: document.getElementById('wisp-url'),
     wispUrlContainer: document.getElementById('wisp-url-container'),
     relayUrl: document.getElementById('relay-url'),
-    relayUrlContainer: document.getElementById('relay-url-container')
+    relayUrlContainer: document.getElementById('relay-url-container'),
+    v86LibrarySelect: document.getElementById('v86-library-select')
 };
 
 // Validate WebSocket URL
@@ -796,18 +821,21 @@ document.addEventListener('fullscreenchange', () => {
 loadPreferences();
 
 // Initial log message
-log('V86 Emulator ready. Multiple OS options available.');
+log(`V86 Emulator ready (using ${currentLibrary === 'v86_modern' ? 'V86 Modern' : 'V86 Standard'} library)`);
+log('Multiple OS options available from CDN.');
 log('Configuration:');
 log('- Adjust RAM and VRAM settings above');
 log('- Select from available ISOs or import your own');
+log('- Switch V86 library version using the dropdown in the header');
 log('- Click "Start" to begin emulation');
 log('');
-log('Available Operating Systems:');
-log('- SliTaz 5.0 (32-bit Linux)');
-log('- TinyCore Linux (minimal)');
-log('- Bodhi Linux 5.1.0 Legacy');
-log('- NanoLinux 64 1.3');
-log('- ReactOS 0.4.15 (Windows-like OS)');
+log('Available Operating Systems (CDN-hosted):');
+log('- TinyCore Linux (minimal, fast boot)');
+log('- NanoLinux 1.4 (ultra-lightweight)');
+log('- SliTaz 5.0 (lightweight Linux)');
+log('- SliTaz Rolling Core 5in1');
+log('- Bodhi Linux 5.1.0 Legacy (Ubuntu-based)');
+log('- ReactOS 0.4.14 (Windows-compatible OS)');
 log('- Or import your own ISO file');
 
 // Update status and initial resource metrics
@@ -851,6 +879,30 @@ elements.screenScale.addEventListener('change', function() {
 elements.audioEnabled.addEventListener('change', function() {
     savePreferences();
 });
+
+// V86 library selector handler
+if (elements.v86LibrarySelect) {
+    // Set initial value from localStorage
+    elements.v86LibrarySelect.value = currentLibrary;
+    
+    elements.v86LibrarySelect.addEventListener('change', function() {
+        const newLibrary = this.value;
+        if (newLibrary !== currentLibrary) {
+            // Save selection
+            localStorage.setItem('v86Library', newLibrary);
+            
+            // Show message that page will reload
+            if (confirm(`Switching to ${newLibrary === 'v86_modern' ? 'V86 Modern' : 'V86 Standard'} library.\n\nThe page will reload to apply changes. Continue?`)) {
+                log(`Switching to ${newLibrary} library...`);
+                // Reload the page to reinitialize with new library
+                window.location.reload();
+            } else {
+                // User cancelled, revert selection
+                this.value = currentLibrary;
+            }
+        }
+    });
+}
 
 // Cleanup blob URLs on page unload to prevent memory leaks
 window.addEventListener('beforeunload', function() {

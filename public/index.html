@@ -17,6 +17,14 @@
         <header>
             <h1>V86 x86 Emulator</h1>
             <p class="subtitle">Multiple Operating Systems</p>
+            <div class="library-selector">
+                <label for="v86-library-select">V86 Library:</label>
+                <select id="v86-library-select">
+                    <option value="v86" selected>V86 (Standard)</option>
+                    <option value="v86_modern">V86 Modern (@sriail/v86_modern)</option>
+                </select>
+                <span class="library-info" title="Select which v86 library to use. Change requires page reload.">ℹ️</span>
+            </div>
         </header>
 
         <div class="settings-panel">
@@ -38,12 +46,12 @@
                 <div class="setting-item">
                     <label for="iso-select">ISO:</label>
                     <select id="iso-select">
-                        <option value="iso/slitaz-5.0.iso">SliTaz 5.0</option>
-                        <option value="iso/slitaz5.0-rolling-core32-cn.iso">SliTaz 5.0 Rolling Core32 (CN)</option>
-                        <option value="iso/TinyCore-current.iso">TinyCore Linux</option>
-                        <option value="iso/bodhi-5.1.0-legacy.iso">Bodhi Linux 5.1.0 Legacy</option>
-                        <option value="iso/nanolinux64-1.3.iso">NanoLinux 64 1.3</option>
-                        <option value="iso/ReactOS-0.4.15-release-1-gdbb43bbaeb2-x86.iso">ReactOS 0.4.15</option>
+                        <option value="https://download.tinycorelinux.net/13.x/x86/release/TinyCore-current.iso">TinyCore Linux</option>
+                        <option value="https://downloads.sourceforge.net/project/nanolinux/14/nanolinux-1.4.iso">NanoLinux 1.4</option>
+                        <option value="https://archive.org/download/slitaz-5.0/slitaz-5.0.iso">SliTaz 5.0</option>
+                        <option value="https://archive.org/download/slitaz-rolling-core-5in1/slitaz-rolling-core-5in1.iso">SliTaz Rolling Core 5in1</option>
+                        <option value="https://archive.org/download/bodhi-5.1.0-legacy/bodhi-5.1.0-legacy.iso">Bodhi Linux 5.1.0 Legacy</option>
+                        <option value="https://downloads.sourceforge.net/project/reactos/ReactOS/0.4.14/ReactOS-0.4.14-release-106-gdb1c396-live.iso">ReactOS 0.4.14</option>
                     </select>
                 </div>
                 <div class="setting-item">

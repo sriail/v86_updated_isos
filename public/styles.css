@@ -513,3 +513,47 @@ header h1 {
 .loading {
     animation: pulse 2s ease-in-out infinite;
 }
+
+/* Library selector */
+.library-selector {
+    margin-top: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 10px;
+    background-color: var(--bg-secondary);
+    border-radius: 6px;
+}
+
+.library-selector label {
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.library-selector select {
+    padding: 8px 12px;
+    font-size: 0.95rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.library-selector select:hover {
+    border-color: var(--text-muted);
+}
+
+.library-selector select:focus {
+    outline: none;
+    border-color: #4CAF50;
+    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+}
+
+.library-info {
+    cursor: help;
+    font-size: 1.2rem;
+    color: var(--text-muted);
+}
